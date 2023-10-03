@@ -72,3 +72,10 @@ docs/_build/
 
 # OCA rules
 !static/lib/
+
+# Ruff stuff
+.ruff_cache
+
+# Ignore secret files and env
+.secrets.*
+.env

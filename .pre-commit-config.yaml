@@ -85,3 +85,9 @@ repos:
       - id: pylint
         args:
           - --rcfile=.pylintrc-mandatory
+  # - repo: https://github.com/charliermarsh/ruff-pre-commit
+  #   rev: v0.0.275
+  #   hooks:
+  #     - id: ruff
+  #       args:
+  #         - --fix
