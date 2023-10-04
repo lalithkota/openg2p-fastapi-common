@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     host: str = "localhost"
     port: int = 8000
 
+    enable_access_log: bool = True
     logging_level: str = "INFO"
     logging_file_name: Optional[Path] = None
 
@@ -43,10 +44,10 @@ class Settings(BaseSettings):
     db_port: int = 5432
     db_dbname: Optional[str] = None
 
-
-def get_config() -> Settings:
-    config = config_registry.get()
-    if not config:
-        config = Settings()
-        config_registry.set(config)
-    return config
+    @classmethod
+    def get_config(cls):
+        config = config_registry.get()
+        if not config:
+            config = cls()
+            config_registry.set(config)
+        return config

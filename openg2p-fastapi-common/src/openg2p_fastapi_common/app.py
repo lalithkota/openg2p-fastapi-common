@@ -6,10 +6,10 @@ import sys
 import uvicorn
 from fastapi import FastAPI
 
-from . import config
+from .config import Settings
 from .context import app_registry
 
-_config = config.get_config()
+_config = Settings.get_config()
 
 
 class Initializer:
@@ -71,7 +71,12 @@ class Initializer:
 
     def run_server(self, args):
         app = app_registry.get()
-        uvicorn.run(app, host=_config.host, port=_config.port)
+        uvicorn.run(
+            app,
+            host=_config.host,
+            port=_config.port,
+            access_log=_config.enable_access_log,
+        )
 
     def migrate_database(self, args):
         # Implement the logic for the 'migrate' subcommand here
