@@ -1,14 +1,8 @@
 """Module containing base models"""
 
-from extendable_pydantic import ExtendableModelMeta
-from pydantic import BaseModel
 from sqlalchemy.orm import DeclarativeBase
 
 from .component import BaseComponent
-
-
-class BaseModel(BaseModel, metaclass=ExtendableModelMeta):
-    pass
 
 
 class BaseORMModel(BaseComponent, DeclarativeBase):

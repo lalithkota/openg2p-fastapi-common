@@ -3,14 +3,13 @@
 from pathlib import Path
 from typing import Optional
 
-from extendable_pydantic import ExtendableModelMeta
 from pydantic import AnyUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .context import config_registry
 
 
-class Settings(BaseSettings, metaclass=ExtendableModelMeta):
+class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="common_")
 
     host: str = "localhost"
@@ -36,15 +35,18 @@ class Settings(BaseSettings, metaclass=ExtendableModelMeta):
 
     # If empty will be constructed like this
     # f"{db_driver}://{db_username}:{db_password}@{db_hostname}:{db_port}/{db_dbname}"
-    db_datasource: Optional[AnyUrl]
+    db_datasource: Optional[AnyUrl] = None
     db_driver: str = "postgresql+asyncpg"
-    db_username: Optional[str]
-    db_password: Optional[str]
+    db_username: Optional[str] = None
+    db_password: Optional[str] = None
     db_hostname: str = "localhost"
     db_port: int = 5432
-    db_dbname: Optional[str]
+    db_dbname: Optional[str] = None
 
 
 def get_config() -> Settings:
     config = config_registry.get()
+    if not config:
+        config = Settings()
+        config_registry.set(config)
     return config

@@ -1,9 +1,9 @@
 """Module from initializing Component Class"""
 
-from .context import _Component, component_registry
+from .context import component_registry
 
 
-class BaseComponent(_Component):
+class BaseComponent:
     def __init__(self, name=""):
         super().__init__(name=name)
         if component_registry.get():
