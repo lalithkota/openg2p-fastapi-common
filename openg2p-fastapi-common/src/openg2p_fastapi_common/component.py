@@ -1,13 +1,11 @@
 """Module from initializing Component Class"""
 
-from extendable import ExtendableMeta
-
-from .context import component_registry
+from .context import component_registry, _Component
 
 
-class BaseComponent(metaclass=ExtendableMeta):
+class BaseComponent(_Component):
     def __init__(self, name=""):
-        self.name = name
+        super().__init__(name=name)
         if component_registry.get():
             component_registry.get().append(self)
 
