@@ -11,6 +11,9 @@ from .context import config_registry
 
 class Settings(BaseSettings, metaclass=ExtendableModelMeta):
     model_config = SettingsConfigDict(env_prefix="common_")
+    
+    host: str = "localhost"
+    port: int = 8000
 
     logging_level: str = "INFO"
     logging_file_name: Optional[Path] = None
@@ -31,7 +34,7 @@ class Settings(BaseSettings, metaclass=ExtendableModelMeta):
     openapi_root_path: Path = "/"
 
     # TODO:
-    db_datasource: Url = ""
+    # db_datasource: Url = ""
 
 
 def get_config() -> Settings:
@@ -39,7 +42,4 @@ def get_config() -> Settings:
     return config
 
 
-def init_config() -> Settings:
-    config = Settings()
-    config_registry.set(config)
-    return config
+
