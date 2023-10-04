@@ -1,15 +1,18 @@
 """Module containing initialization instructions and FastAPI app"""
-import logging
 import argparse
+import logging
 import sys
-from fastapi import FastAPI
-from . import config
-from .context import app_registry, config_registry
-from .component import BaseComponent
+
 import uvicorn
+from fastapi import FastAPI
+
+from . import config
+from .component import BaseComponent
 from .config import Settings
+from .context import app_registry, config_registry
 
 _config = config.get_config()
+
 
 class Initializer(BaseComponent):
     def __init__(self, **kwargs):
@@ -36,7 +39,7 @@ class Initializer(BaseComponent):
         if _config.logging_file_name:
             file_handler = logging.FileHandler(_config.logging_file_name)
             logger.addHandler(file_handler)
-        return logger    
+        return logger
 
     def init_app(self):
         app = FastAPI(
@@ -60,31 +63,36 @@ class Initializer(BaseComponent):
         args = self.main_init_args()
         # Check if the 'initialize' flag is provided
         print(args)
-        if args.common == 'run':
+        if args.common == "run":
             # Run your initialization code here
             print("Initializing...")
             self.run_server()
-        elif args.common == 'migrate':
+        elif args.common == "migrate":
             self.migrate_database()
-        elif args.common == 'getOpenAPI':
+        elif args.common == "getOpenAPI":
             self.get_openapi()
         else:
             print("Unknown command")
 
     def main_init_args(self):
-        parser = argparse.ArgumentParser(description='FastApi Common Server')
-        subparsers = parser.add_subparsers(help='List Commands.', dest='command')
-        run_subparser = subparsers.add_parser('run', help='Run API Server.')
-        migrate_subparser = subparsers.add_parser('migrate', help='Create/Migrate Database Tables.')
-        openapi_subparser = subparsers.add_parser('getOpenAPI', help='Get OpenAPI Json of the Server.')
-        openapi_subparser.add_argument('filepath', help='Path of the Output OpenAPI Json File.')
+        parser = argparse.ArgumentParser(description="FastApi Common Server")
+        subparsers = parser.add_subparsers(help="List Commands.", dest="command")
+        subparsers.add_parser("run", help="Run API Server.")
+        subparsers.add_parser(
+            "migrate", help="Create/Migrate Database Tables."
+        )
+        openapi_subparser = subparsers.add_parser(
+            "getOpenAPI", help="Get OpenAPI Json of the Server."
+        )
+        openapi_subparser.add_argument(
+            "filepath", help="Path of the Output OpenAPI Json File."
+        )
         args = parser.parse_args()
         return args
 
     def run_server(self):
         app = app_registry.get()
         uvicorn.run(app, host=_config.host, port=_config.port)
-        
 
     def migrate_database(self):
         # Implement the logic for the 'migrate' subcommand here
@@ -93,6 +101,3 @@ class Initializer(BaseComponent):
     def get_openapi(self):
         # Implement the logic for the 'getOpenAPI' subcommand here
         print("Getting OpenAPI...")
-
-
-            

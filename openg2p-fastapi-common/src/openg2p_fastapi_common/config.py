@@ -48,6 +48,3 @@ class Settings(BaseSettings, metaclass=ExtendableModelMeta):
 def get_config() -> Settings:
     config = config_registry.get()
     return config
-
-
-

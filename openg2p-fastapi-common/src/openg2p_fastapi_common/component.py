@@ -1,6 +1,6 @@
 """Module from initializing Component Class"""
 
-from .context import component_registry, _Component
+from .context import _Component, component_registry
 
 
 class BaseComponent(_Component):
