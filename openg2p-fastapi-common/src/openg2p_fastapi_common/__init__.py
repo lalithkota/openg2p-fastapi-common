@@ -1,5 +1,2 @@
-from . import app
-from . import config
-from . import logging
-
+from . import app, config, logging
 from .app import initialize

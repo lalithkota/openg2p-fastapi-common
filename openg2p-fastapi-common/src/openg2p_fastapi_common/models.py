@@ -11,6 +11,5 @@ class BaseModel(BaseModel, metaclass=ExtendableModelMeta):
 
 
 class BaseORMModel(DeclarativeBase, metaclass=ExtendableMeta):
-
     def update():
         db.update()

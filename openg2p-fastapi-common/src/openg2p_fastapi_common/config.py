@@ -33,6 +33,7 @@ class Settings(BaseSettings, metaclass=ExtendableModelMeta):
     # TODO:
     db_datasource: Url = ""
 
+
 def get_config() -> Settings:
     config = config_registry.get()
     return config
