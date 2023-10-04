@@ -30,8 +30,10 @@ def get_app() -> FastAPI:
     app = app_registry.get()
     return app
 
+
 def init_db():
     _config.db_datasource = "postgresql://localhost:5432/mydb"
+
 
 def initialize():
     """

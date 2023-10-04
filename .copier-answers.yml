@@ -1,0 +1,16 @@
+# Do NOT update manually; changes here will be overwritten by Copier
+_commit: c14ee3b
+_src_path: ../openg2p-fastapi-template
+github_ci_docker_build: false
+github_ci_openapi_publish: false
+github_ci_precommit: true
+github_ci_pypi_publish: true
+github_ci_tests: true
+github_ci_tests_codecov: true
+module_name: openg2p_fastapi_common
+org_name: OpenG2P
+org_slug: OpenG2P
+package_name: openg2p-fastapi-common
+repo_name: OpenG2P FastAPI Common Libraries
+repo_slug: openg2p-fastapi-common
+
