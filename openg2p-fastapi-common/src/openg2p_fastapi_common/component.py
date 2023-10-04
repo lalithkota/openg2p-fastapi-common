@@ -11,21 +11,21 @@ class BaseComponent(metaclass=ExtendableMeta):
         if component_registry.get():
             component_registry.get().append(self)
 
-
-def get_component(cls, name="", strict=True):
-    for component in component_registry.get():
-        result = None
-        if strict:
-            if cls is type(component):
-                result = component
-        else:
-            if isinstance(component, cls):
-                result = component
-
-        if result:
-            if name:
-                if name == result.name:
-                    return result
+    @classmethod
+    def get_component(cls, name="", strict=False):
+        for component in component_registry.get():
+            result = None
+            if strict:
+                if cls is type(component):
+                    result = component
             else:
-                return result
-    return None
+                if isinstance(component, cls):
+                    result = component
+
+            if result:
+                if name:
+                    if name == result.name:
+                        return result
+                else:
+                    return result
+        return None
