@@ -3,14 +3,17 @@
 from pathlib import Path
 from typing import Optional
 
-from extendable_pydantic import ExtendableModelMeta
+from pydantic import AnyUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .context import config_registry
 
 
-class Settings(BaseSettings, metaclass=ExtendableModelMeta):
+class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="common_")
+
+    host: str = "0.0.0.0"
+    port: int = 8000
 
     logging_level: str = "INFO"
     logging_file_name: Optional[Path] = None
@@ -28,18 +31,22 @@ class Settings(BaseSettings, metaclass=ExtendableModelMeta):
     openapi_contact_email: str = "info@openg2p.org"
     openapi_license_name: str = "Mozilla Public License 2.0"
     openapi_license_url: str = "https://www.mozilla.org/en-US/MPL/2.0/"
-    openapi_root_path: Path = "/"
+    openapi_root_path: str = "/"
 
-    # TODO:
-    db_datasource: Url = ""
+    # If empty will be constructed like this
+    # f"{db_driver}://{db_username}:{db_password}@{db_hostname}:{db_port}/{db_dbname}"
+    db_datasource: Optional[AnyUrl] = None
+    db_driver: str = "postgresql+asyncpg"
+    db_username: Optional[str] = None
+    db_password: Optional[str] = None
+    db_hostname: str = "localhost"
+    db_port: int = 5432
+    db_dbname: Optional[str] = None
 
-
-def get_config() -> Settings:
-    config = config_registry.get()
-    return config
-
-
-def init_config() -> Settings:
-    config = Settings()
-    config_registry.set(config)
-    return config
+    @classmethod
+    def get_config(cls):
+        config = config_registry.get()
+        if not config:
+            config = cls()
+            config_registry.set(config)
+        return config

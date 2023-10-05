@@ -3,18 +3,14 @@
 from fastapi import APIRouter
 
 from .component import BaseComponent
+from .context import app_registry
 
 
-class BaseController(BaseComponent, APIRouter):
-    # post = APIRouter.post
-    # get = APIRouter.get
-    # patch = APIRouter.patch
-    # put = APIRouter.put
-    # delete = APIRouter.delete
-    # options = APIRouter.options
-    # trace = APIRouter.trace
-    # api_route = APIRouter.api_route
-
+class BaseController(BaseComponent):
     def __init__(self, name="", **kwargs):
-        super(BaseComponent, self).__init__(name)
-        super(APIRouter, self).__init__(**kwargs)
+        super().__init__(name=name)
+        self.router = APIRouter(**kwargs)
+
+    def post_init(self):
+        app_registry.get().include_router(self.router)
+        return self
