@@ -44,9 +44,16 @@ class Settings(BaseSettings):
     db_dbname: Optional[str] = None
 
     @classmethod
-    def get_config(cls):
-        config = config_registry.get()
-        if not config:
-            config = cls()
-            config_registry.set(config)
-        return config
+    def get_config(cls, strict=True):
+        result = None
+        for config in config_registry.get():
+            if strict:
+                if cls is type(config):
+                    result = config
+            else:
+                if isinstance(config, cls):
+                    result = config
+        if not result:
+            result = cls()
+            config_registry.get().append(result)
+        return result

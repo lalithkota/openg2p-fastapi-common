@@ -1,6 +1,7 @@
 """Module containing initialization instructions and FastAPI app"""
 import argparse
 import logging
+import orjson
 import sys
 
 import json_logging
@@ -9,8 +10,9 @@ from fastapi import FastAPI
 
 from .config import Settings
 from .context import app_registry
+from .exception import BaseExceptionHandler
 
-_config = Settings.get_config()
+_config = Settings.get_config(strict=False)
 
 
 class Initializer:
@@ -24,8 +26,11 @@ class Initializer:
         self.init_logger()
         self.init_app()
 
+        BaseExceptionHandler()
+
     def init_logger(self):
         json_logging.init_fastapi(enable_json=True)
+        json_logging.JSON_SERIALIZER = lambda log: orjson.dumps(log).decode("utf-8")
         logger = logging.getLogger(__name__)
         logger.setLevel(getattr(logging, _config.logging_level))
         logger.addHandler(logging.StreamHandler(sys.stdout))
