@@ -3,6 +3,7 @@ import argparse
 import logging
 import sys
 
+import json_logging
 import uvicorn
 from fastapi import FastAPI
 
@@ -24,6 +25,7 @@ class Initializer:
         self.init_app()
 
     def init_logger(self):
+        json_logging.init_fastapi(enable_json=True)
         logger = logging.getLogger(__name__)
         logger.setLevel(getattr(logging, _config.logging_level))
         logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -47,6 +49,7 @@ class Initializer:
             },
             root_path=_config.openapi_root_path if _config.openapi_root_path else "/",
         )
+        json_logging.init_request_instrument(app)
         app_registry.set(app)
         return app
 
@@ -75,7 +78,7 @@ class Initializer:
             app,
             host=_config.host,
             port=_config.port,
-            access_log=_config.enable_access_log,
+            access_log=False,
         )
 
     def migrate_database(self, args):

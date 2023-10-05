@@ -2,10 +2,7 @@
 
 from sqlalchemy.orm import DeclarativeBase
 
-from .component import BaseComponent
 
-
-class BaseORMModel(BaseComponent, DeclarativeBase):
-    def __init__(self, name="", **kwargs):
-        super(BaseComponent, self).__init__(name)
+class BaseORMModel(DeclarativeBase):
+    def __init__(self, **kwargs):
         super(DeclarativeBase, self).__init__(**kwargs)

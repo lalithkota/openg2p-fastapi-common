@@ -12,10 +12,9 @@ from .context import config_registry
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="common_")
 
-    host: str = "localhost"
+    host: str = "0.0.0.0"
     port: int = 8000
 
-    enable_access_log: bool = True
     logging_level: str = "INFO"
     logging_file_name: Optional[Path] = None
 
@@ -32,7 +31,7 @@ class Settings(BaseSettings):
     openapi_contact_email: str = "info@openg2p.org"
     openapi_license_name: str = "Mozilla Public License 2.0"
     openapi_license_url: str = "https://www.mozilla.org/en-US/MPL/2.0/"
-    openapi_root_path: Path = "/"
+    openapi_root_path: str = "/"
 
     # If empty will be constructed like this
     # f"{db_driver}://{db_username}:{db_password}@{db_hostname}:{db_port}/{db_dbname}"
