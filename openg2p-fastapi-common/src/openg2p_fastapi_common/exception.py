@@ -1,7 +1,7 @@
 import logging
 
-from fastapi.responses import ORJSONResponse
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
+from fastapi.responses import ORJSONResponse
 
 from .component import BaseComponent
 from .context import app_registry
@@ -16,38 +16,47 @@ class BaseExceptionHandler(BaseComponent):
 
         app = app_registry.get()
         app.add_exception_handler(BaseAppException, self.base_exception_handler)
-        app.add_exception_handler(RequestValidationError, self.request_validation_exception_handler)
-        app.add_exception_handler(ResponseValidationError, self.response_validation_exception_handler)
+        app.add_exception_handler(
+            RequestValidationError, self.request_validation_exception_handler
+        )
+        app.add_exception_handler(
+            ResponseValidationError, self.response_validation_exception_handler
+        )
         app.add_exception_handler(Exception, self.unknown_exception_handler)
 
     async def base_exception_handler(self, request, exc: BaseAppException):
         _logger.exception(f"Received Exception: {exc}")
         # TODO: Handle multiple exceptions
-        res = ErrorListResponse(errors=[ErrorResponse(code=exc.code,message=exc.message)])
-        return ORJSONResponse(content=res.model_dump(), status_code=exc.http_status_code)
+        res = ErrorListResponse(
+            errors=[ErrorResponse(code=exc.code, message=exc.message)]
+        )
+        return ORJSONResponse(
+            content=res.model_dump(), status_code=exc.http_status_code
+        )
 
-    async def request_validation_exception_handler(self, request, exc: RequestValidationError):
+    async def request_validation_exception_handler(
+        self, request, exc: RequestValidationError
+    ):
         _logger.exception("Received exception: %s", repr(exc))
         errors = []
         for err in exc.errors():
             err_msg = err.get("msg")
             errors.append(
-                ErrorResponse(
-                    code="G2P-REQ-102",
-                    message=f"Invalid Input. {err_msg}"
-                )
+                ErrorResponse(code="G2P-REQ-102", message=f"Invalid Input. {err_msg}")
             )
         res = ErrorListResponse(errors=errors)
         return ORJSONResponse(content=res.model_dump(), status_code=400)
 
-    async def response_validation_exception_handler(self, request, exc: ResponseValidationError):
+    async def response_validation_exception_handler(
+        self, request, exc: ResponseValidationError
+    ):
         _logger.exception("Received exception: %s", repr(exc))
         errors = []
         for err in exc.errors():
             errors.append(
                 ErrorResponse(
                     code="G2P-RES-100",
-                    message=f"Internal Server Error. Invalid Response. {err}"
+                    message=f"Internal Server Error. Invalid Response. {err}",
                 )
             )
         res = ErrorListResponse(errors=errors)
@@ -55,19 +64,12 @@ class BaseExceptionHandler(BaseComponent):
 
     async def unknown_exception_handler(self, request, exc):
         _logger.exception("Received Unknown Exception: %s", repr(exc))
-        l = str(exc).split('::')
-        if len(l)>1:
-            code = l[0]
-            message = l[1]
+        exc_split = str(exc).split("::")
+        if len(exc_split) > 1:
+            code = exc_split[0]
+            message = exc_split[1]
         else:
-            code = 'G2P-REQ-100'
-            message = l[0]
-        res = ErrorListResponse(
-            errors=[
-                ErrorResponse(
-                    code=code,
-                    message=message
-                )
-            ]
-        )
+            code = "G2P-REQ-100"
+            message = exc_split[0]
+        res = ErrorListResponse(errors=[ErrorResponse(code=code, message=message)])
         return ORJSONResponse(content=res.model_dump(), status_code=500)

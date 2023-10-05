@@ -1,8 +1,8 @@
 """Module from initializing base controllers"""
 
-from fastapi.routing import APIRoute, APIRouter
-from fastapi.responses import ORJSONResponse
 from fastapi.datastructures import Default
+from fastapi.responses import ORJSONResponse
+from fastapi.routing import APIRoute, APIRouter
 
 from .component import BaseComponent
 from .context import app_registry
@@ -12,7 +12,7 @@ from .errors import ErrorListResponse
 class BaseController(BaseComponent):
     def __init__(self, name="", **kwargs):
         super().__init__(name=name)
-        if not "default_response_class" in kwargs:
+        if "default_response_class" not in kwargs:
             kwargs["default_response_class"] = Default(ORJSONResponse)
         self.router = APIRouter(**kwargs)
 

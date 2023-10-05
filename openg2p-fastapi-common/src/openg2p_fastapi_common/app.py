@@ -1,10 +1,10 @@
 """Module containing initialization instructions and FastAPI app"""
 import argparse
 import logging
-import orjson
 import sys
 
 import json_logging
+import orjson
 import uvicorn
 from fastapi import FastAPI
 
