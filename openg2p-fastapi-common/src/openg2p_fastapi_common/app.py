@@ -2,17 +2,20 @@
 import argparse
 import logging
 import sys
+from contextlib import asynccontextmanager
 
 import json_logging
 import orjson
 import uvicorn
 from fastapi import FastAPI
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from .config import Settings
-from .context import app_registry
+from .context import app_registry, dbengine
 from .exception import BaseExceptionHandler
 
 _config = Settings.get_config(strict=False)
+_logger = logging.getLogger(__name__)
 
 
 class Initializer:
@@ -25,6 +28,7 @@ class Initializer:
         """
         self.init_logger()
         self.init_app()
+        self.init_db()
 
         BaseExceptionHandler()
 
@@ -39,6 +43,10 @@ class Initializer:
             logger.addHandler(file_handler)
         return logger
 
+    def init_db(self):
+        db_engine = create_async_engine(_config.db_datasource, echo=_config.db_logging)
+        dbengine.set(db_engine)
+
     def init_app(self):
         app = FastAPI(
             title=_config.openapi_title,
@@ -52,6 +60,7 @@ class Initializer:
                 "name": _config.openapi_license_name,
                 "url": _config.openapi_license_url,
             },
+            lifespan=self.fastapi_app_lifespan,
             root_path=_config.openapi_root_path if _config.openapi_root_path else "/",
         )
         json_logging.init_request_instrument(app)
@@ -88,8 +97,16 @@ class Initializer:
 
     def migrate_database(self, args):
         # Implement the logic for the 'migrate' subcommand here
-        print("Running migration...")
+        _logger.info("Starting DB migrations.")
 
     def get_openapi(self, args):
-        # Implement the logic for the 'getOpenAPI' subcommand here
-        print(f"Getting OpenAPI... {args.filepath}")
+        app = app_registry.get()
+        with open(args.filepath, "wb+") as f:
+            f.write(orjson.dumps(app.openapi(), option=orjson.OPT_INDENT_2))
+
+    @asynccontextmanager
+    async def fastapi_app_lifespan(self, app: FastAPI):
+        # Do nothing before startup
+        yield
+        # Dispose database connection on shutdown
+        await dbengine.get().dispose()
