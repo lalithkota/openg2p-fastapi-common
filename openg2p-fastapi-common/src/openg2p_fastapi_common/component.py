@@ -6,8 +6,7 @@ from .context import component_registry
 class BaseComponent:
     def __init__(self, name=""):
         self.name = name
-        if component_registry.get():
-            component_registry.get().append(self)
+        component_registry.get().append(self)
 
     @classmethod
     def get_component(cls, name="", strict=False):

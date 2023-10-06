@@ -1,16 +1,15 @@
 """Module initializing configs"""
-
 from pathlib import Path
 from typing import Optional
 
-from pydantic import AnyUrl
+from pydantic import AnyUrl, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .context import config_registry
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="common_")
+    model_config = SettingsConfigDict(env_prefix="common_", env_file=".env")
 
     host: str = "0.0.0.0"
     port: int = 8000
@@ -32,6 +31,7 @@ class Settings(BaseSettings):
     openapi_license_name: str = "Mozilla Public License 2.0"
     openapi_license_url: str = "https://www.mozilla.org/en-US/MPL/2.0/"
     openapi_root_path: str = "/"
+    openapi_common_api_prefix: str = ""
 
     # If empty will be constructed like this
     # f"{db_driver}://{db_username}:{db_password}@{db_hostname}:{db_port}/{db_dbname}"
@@ -42,6 +42,23 @@ class Settings(BaseSettings):
     db_hostname: str = "localhost"
     db_port: int = 5432
     db_dbname: Optional[str] = None
+    db_logging: bool = False
+
+    @model_validator(mode="after")
+    def validate_db_datasource(self) -> "Settings":
+        datasource = ""
+        datasource += f"{self.db_driver}://"
+        if self.db_username:
+            datasource += f"{self.db_username}:{self.db_password}@"
+        datasource += self.db_hostname
+        if self.db_port:
+            datasource += f":{self.db_port}"
+        if self.db_dbname:
+            datasource += f"/{self.db_dbname}"
+
+        self.db_datasource = datasource
+
+        return self
 
     @classmethod
     def get_config(cls, strict=True):
