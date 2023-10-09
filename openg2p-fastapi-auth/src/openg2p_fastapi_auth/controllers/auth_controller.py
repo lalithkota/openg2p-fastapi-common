@@ -16,8 +16,8 @@ class AuthController(BaseController):
             methods=["GET"],
         )
         self.router.add_api_route(
-            "/profile",
-            self.get_profile,
+            "/getLoginProviders",
+            self.get_login_providers,
             responses={200: {"model": BasicProfile}},
             methods=["GET"],
         )
