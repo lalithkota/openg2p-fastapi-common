@@ -6,7 +6,7 @@ from datetime import datetime
 from openg2p_fastapi_common.controller import BaseController
 from openg2p_fastapi_common.errors.base_error import ErrorResponse
 
-from ..models.common import Ack, CommonResponse, CommonResponseMessage, MapperValue
+from ..models.common import Ack, CommonResponse, CommonResponseMessage
 from ..models.link import LinkCallbackHttpRequest
 from ..service.link import MapperLinkService
 
@@ -56,7 +56,7 @@ class LinkCallbackController(BaseController):
                 )
                 continue
             if txn.fa:
-                txn_status.refs[txn.reference_id].value = MapperValue(fa=txn.fa)
+                txn_status.refs[txn.reference_id].fa = txn.fa
 
         if txn_status.callable_on_complete:
             asyncio.create_task(txn_status.callable_on_complete(txn_status))

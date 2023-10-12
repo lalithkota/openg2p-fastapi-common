@@ -49,10 +49,9 @@ class MapperValue(BaseModel):
     fa: Optional[str] = None
 
 
-class SingleTxnRefStatus(BaseModel):
+class SingleTxnRefStatus(MapperValue):
     reference_id: str
     status: RequestStatusEnum
-    value: Optional[MapperValue] = None
 
 
 class TxnStatus(BaseModel):

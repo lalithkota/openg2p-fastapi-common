@@ -44,7 +44,9 @@ class MapperResolveService(BaseService):
         for mapping in mappings:
             reference_id = str(uuid.uuid4())
             txn_statuses[reference_id] = SingleTxnRefStatus(
-                status=RequestStatusEnum.rcvd, reference_id=reference_id
+                status=RequestStatusEnum.rcvd,
+                reference_id=reference_id,
+                **mapping.model_dump(),
             )
             single_resolve_request = SingleResolveRequest(
                 reference_id=reference_id,
@@ -65,6 +67,11 @@ class MapperResolveService(BaseService):
             refs=txn_statuses,
             callable_on_complete=callback_func,
         )
+
+        if not mappings:
+            txn_status.status = RequestStatusEnum.succ
+            return txn_status
+
         self.transaction_queue[txn_id] = txn_status
         resolve_http_request = ResolveHttpRequest(
             signature='Signature:  namespace="g2p", '

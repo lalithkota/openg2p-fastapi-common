@@ -6,7 +6,7 @@ from datetime import datetime
 from openg2p_fastapi_common.controller import BaseController
 from openg2p_fastapi_common.errors.base_error import ErrorResponse
 
-from ..models.common import Ack, CommonResponse, CommonResponseMessage, MapperValue
+from ..models.common import Ack, CommonResponse, CommonResponseMessage
 from ..models.resolve import ResolveCallbackHttpRequest
 from ..service.resolve import MapperResolveService
 
@@ -31,9 +31,7 @@ class ResolveCallbackController(BaseController):
 
     async def mapper_on_resolve(self, resolve_http_request: ResolveCallbackHttpRequest):
         txn_id = resolve_http_request.message.transaction_id
-        txn_status = self.mapper_resolve_service.transaction_queue.get().pop(
-            txn_id, None
-        )
+        txn_status = self.mapper_resolve_service.transaction_queue.pop(txn_id, None)
         if not txn_status:
             _logger.error("On resolve. Invalid Txn id received.")
             return CommonResponseMessage(
@@ -58,13 +56,10 @@ class ResolveCallbackController(BaseController):
                     txn.status_reason_message,
                 )
                 continue
-            mapper_value = MapperValue()
             if txn.fa:
-                mapper_value.fa = txn.fa
+                txn_status.refs[txn.reference_id].fa = txn.fa
             if txn.id:
-                mapper_value.id = txn.id
-            if mapper_value.id or mapper_value.fa:
-                txn_status.refs[txn.reference_id].value = mapper_value
+                txn_status.refs[txn.reference_id].id = txn.id
 
         if txn_status.callable_on_complete:
             asyncio.create_task(txn_status.callable_on_complete(txn_status))
