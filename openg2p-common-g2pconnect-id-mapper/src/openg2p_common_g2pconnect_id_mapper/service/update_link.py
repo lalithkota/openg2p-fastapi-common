@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Callable, Coroutine, List
+from typing import Callable, Coroutine, Dict, List
 
 from openg2p_fastapi_common.service import BaseService
 
@@ -17,6 +17,9 @@ _config = Settings.get_config(strict=False)
 class MapperUpdateOrLinkService(BaseService):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # TODO: Do garbage collection for this
+        self.transaction_queue: Dict[str, TxnStatus] = {}
+
         self.mapper_update_service = MapperUpdateService.get_component()
         self.mapper_link_service = MapperLinkService.get_component()
         self.mapper_resolve_service = MapperResolveService.get_component()
@@ -43,6 +46,8 @@ class MapperUpdateOrLinkService(BaseService):
                     final_txn_status.refs += link_txn_status.refs
                     final_txn_status.txn_id = resolve_txn_status.txn_id
 
+                    self.transaction_queue[final_txn_status.txn_id] = final_txn_status
+
                     asyncio.create_task(callback_func(final_txn_status))
 
                 self.mapper_update_service.update_request(mappings, on_update_callback)
@@ -52,4 +57,5 @@ class MapperUpdateOrLinkService(BaseService):
         res = await self.mapper_resolve_service.resolve_request(
             mappings, on_resolve_callback
         )
+        self.transaction_queue[res.txn_id] = res
         return res

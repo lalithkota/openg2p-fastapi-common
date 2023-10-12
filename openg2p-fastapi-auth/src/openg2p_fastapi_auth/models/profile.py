@@ -1,9 +1,11 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class BasicProfile(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     name: Optional[str] = None
     sub: Optional[str] = None
     iss: Optional[str] = None

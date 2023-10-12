@@ -41,9 +41,10 @@ class JwtBearerAuth(HTTPBearer):
             "auth_default_jwks_urls", []
         )
 
-        jwt_token = (
-            request.headers["Authorization"] or request.cookies["X-Access-Token"]
+        jwt_token = request.headers.get("Authorization", None) or request.cookies.get(
+            "X-Access-Token", None
         )
+        jwt_id_token = request.cookies.get("X-ID-Token", None)
         if jwt_token:
             jwt_token = jwt_token.removeprefix("Bearer ")
 
@@ -88,6 +89,16 @@ class JwtBearerAuth(HTTPBearer):
                 message=f"Unauthorized. Invalid Jwt. {repr(e)}"
             ) from e
 
+        if jwt_id_token:
+            try:
+                res = jwt.decode(jwt_id_token, jwks, access_token=jwt_token)
+                if res:
+                    unverified_payload.update(res)
+            except Exception as e:
+                raise UnauthorizedError(
+                    message=f"Unauthorized. Invalid Jwt ID Token. {repr(e)}"
+                ) from e
+
         claim_to_check = config_dict.get("claim_name", None)
         claim_values = config_dict.get("claim_values", None)
         if claim_to_check:
@@ -100,5 +111,7 @@ class JwtBearerAuth(HTTPBearer):
             else:
                 if all(x in claims for x in claim_values):
                     raise ForbiddenError(message="Forbidden. Claim(s) don't match.")
+
+        unverified_payload["credentials"] = jwt_token
 
         return AuthCredentials.model_validate(unverified_payload)
