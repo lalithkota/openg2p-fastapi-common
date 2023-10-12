@@ -9,7 +9,9 @@ from .context import config_registry
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="common_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="common_", env_file=".env", extra="allow"
+    )
 
     host: str = "0.0.0.0"
     port: int = 8000

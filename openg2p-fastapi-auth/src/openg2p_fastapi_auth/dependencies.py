@@ -1,39 +1,35 @@
+from typing import Optional
+
 import httpx
 from fastapi import Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
-from openg2p_fastapi_common.component import BaseComponent
 from openg2p_fastapi_common.config import Settings
-from openg2p_fastapi_common.context import app_registry
 from openg2p_fastapi_common.errors.http_exceptions import (
     ForbiddenError,
     UnauthorizedError,
 )
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from .context import jwks_cache
+from .models.credentials import AuthCredentials
 
 _config = Settings.get_config(strict=False)
 
 
-class JwtAuthenticationMiddleware(BaseComponent):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        app_registry.get().add_middleware(
-            BaseHTTPMiddleware, dispatch=self.perform_jwt_auth
-        )
-
-    async def perform_jwt_auth(self, request: Request, call_next):
+class JwtBearerAuth(HTTPBearer):
+    async def __call__(
+        self, request: Request
+    ) -> Optional[HTTPAuthorizationCredentials]:
         config_dict = _config.model_dump()
         if not config_dict.get("auth_enabled", None):
-            return await call_next()
+            return None
 
         api_call_name = str(request.scope["route"].name)
 
         api_auth_settings = config_dict.get("auth_api_" + api_call_name, None)
 
         if (not api_auth_settings) or (not api_auth_settings.get("enabled", None)):
-            return await call_next()
+            return None
 
         issuers_list = api_auth_settings.get("issuers", None) or config_dict.get(
             "auth_default_issuers", []
@@ -105,6 +101,4 @@ class JwtAuthenticationMiddleware(BaseComponent):
                 if all(x in claims for x in claim_values):
                     raise ForbiddenError(message="Forbidden. Claim(s) don't match.")
 
-        request.auth = unverified_payload
-
-        return await call_next(request)
+        return AuthCredentials.model_validate(unverified_payload)
