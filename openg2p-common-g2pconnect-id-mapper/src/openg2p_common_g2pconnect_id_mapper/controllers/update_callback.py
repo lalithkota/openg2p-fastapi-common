@@ -31,7 +31,7 @@ class UpdateCallbackController(BaseController):
 
     async def mapper_on_update(self, update_http_request: UpdateCallbackHttpRequest):
         txn_id = update_http_request.message.transaction_id
-        txn_status = self.mapper_update_service.transaction_queue.pop(txn_id, None)
+        txn_status = self.mapper_update_service.transaction_queue.get(txn_id, None)
         if not txn_status:
             _logger.error("On Update. Invalid Txn id received.")
             return CommonResponseMessage(

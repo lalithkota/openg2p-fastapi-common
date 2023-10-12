@@ -31,7 +31,7 @@ class ResolveCallbackController(BaseController):
 
     async def mapper_on_resolve(self, resolve_http_request: ResolveCallbackHttpRequest):
         txn_id = resolve_http_request.message.transaction_id
-        txn_status = self.mapper_resolve_service.transaction_queue.pop(txn_id, None)
+        txn_status = self.mapper_resolve_service.transaction_queue.get(txn_id, None)
         if not txn_status:
             _logger.error("On resolve. Invalid Txn id received.")
             return CommonResponseMessage(

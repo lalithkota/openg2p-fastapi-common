@@ -30,7 +30,7 @@ class LinkCallbackController(BaseController):
 
     async def mapper_on_link(self, link_http_request: LinkCallbackHttpRequest):
         txn_id = link_http_request.message.transaction_id
-        txn_status = self.mapper_link_service.transaction_queue.pop(txn_id, None)
+        txn_status = self.mapper_link_service.transaction_queue.get(txn_id, None)
         if not txn_status:
             _logger.error("On Link. Invalid Txn id received.")
             return CommonResponseMessage(

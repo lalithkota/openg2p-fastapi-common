@@ -38,8 +38,10 @@ class MapperUpdateOrLinkService(BaseService):
 
             async def on_link_callback(link_txn_status: TxnStatus):
                 async def on_update_callback(update_txn_status: TxnStatus):
+                    # TODO: Improve the following logic of merge update records and link records
                     final_txn_status = update_txn_status.model_copy()
                     final_txn_status.refs += link_txn_status.refs
+                    final_txn_status.txn_id = resolve_txn_status.txn_id
 
                     asyncio.create_task(callback_func(final_txn_status))
 

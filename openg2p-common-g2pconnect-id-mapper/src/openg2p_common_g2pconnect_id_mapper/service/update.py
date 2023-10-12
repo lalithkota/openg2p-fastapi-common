@@ -27,6 +27,7 @@ _config = Settings.get_config(strict=False)
 class MapperUpdateService(BaseService):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # TODO: Do garbage collection for this
         self.transaction_queue: Dict[str, TxnStatus] = {}
 
     async def update_request(
