@@ -9,7 +9,7 @@ from fastapi import Depends, Response
 from fastapi.responses import RedirectResponse
 from jose import jwt
 from openg2p_fastapi_common.controller import BaseController
-from openg2p_fastapi_common.errors.base_exception import BaseAppException
+from openg2p_fastapi_common.errors.http_exceptions import InternalServerError
 
 from ..config import Settings
 from ..dependencies import JwtBearerAuth
@@ -87,10 +87,9 @@ class AuthController(BaseController):
                         )
                 except Exception as e:
                     _logger.exception("Error fetching user profile.")
-                    raise BaseAppException(
-                        "G2P-AUT-402",
+                    raise InternalServerError(
+                        "G2P-AUT-502",
                         f"Error fetching userinfo. {repr(e)}",
-                        http_status_code=500,
                     ) from e
             return BasicProfile(**auth.model_dump())
         else:
