@@ -1,12 +1,9 @@
-from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from openg2p_fastapi_common.context import dbengine
-from openg2p_fastapi_common.models import BaseORMModel
-from sqlalchemy import JSON, Boolean, DateTime, String, select
+from openg2p_fastapi_common.models import BaseORMModelWithTimes
+from sqlalchemy import JSON, String
 from sqlalchemy import Enum as SaEnum
-from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -14,10 +11,9 @@ class LoginProviderTypes(Enum):
     oauth2_auth_code = "oauth2_auth_code"
 
 
-class LoginProvider(BaseORMModel):
+class LoginProvider(BaseORMModelWithTimes):
     __tablename__ = "login_providers"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String())
     type: Mapped[LoginProviderTypes] = mapped_column(SaEnum(LoginProviderTypes))
 
@@ -28,37 +24,9 @@ class LoginProvider(BaseORMModel):
 
     authorization_parameters: Mapped[Dict[str, Any]] = mapped_column(JSON(), default={})
 
-    active: Mapped[bool] = mapped_column(Boolean())
-
-    created_at: Mapped[datetime] = mapped_column(DateTime(), default=datetime.utcnow)
-    updated_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(), default=datetime.utcnow
-    )
-
-    @classmethod
-    async def get_login_providers(cls) -> List["LoginProvider"]:
-        response = []
-        async_session_maker = async_sessionmaker(dbengine.get())
-        async with async_session_maker() as session:
-            stmt = select(cls).order_by(cls.id.asc())
-
-            result = await session.execute(stmt)
-
-            response = list(result.scalars())
-        return response
-
-    @classmethod
-    async def get_login_provider_by_id(cls, id: int) -> "LoginProvider":
-        result = None
-        async_session_maker = async_sessionmaker(dbengine.get())
-        async with async_session_maker() as session:
-            result = await session.get(cls, id)
-
-        return result
-
     @classmethod
     async def get_login_provider_from_iss(cls, iss: str) -> "LoginProvider":
-        providers = await cls.get_login_providers()
+        providers: List[LoginProvider] = await cls.get_all()
         for lp in providers:
             if lp.type == LoginProviderTypes.oauth2_auth_code:
                 if iss in lp.authorization_parameters.get("token_endpoint", ""):

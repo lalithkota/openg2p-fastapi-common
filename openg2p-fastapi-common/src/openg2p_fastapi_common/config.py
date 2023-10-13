@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import Optional
 
-from pydantic import AnyUrl, model_validator
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .context import config_registry
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     # If empty will be constructed like this
     # f"{db_driver}://{db_username}:{db_password}@{db_hostname}:{db_port}/{db_dbname}"
-    db_datasource: Optional[AnyUrl] = None
+    db_datasource: Optional[str] = None
     db_driver: str = "postgresql+asyncpg"
     db_username: Optional[str] = None
     db_password: Optional[str] = None

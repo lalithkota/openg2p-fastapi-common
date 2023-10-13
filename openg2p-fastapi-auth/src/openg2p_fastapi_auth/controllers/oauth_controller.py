@@ -39,7 +39,7 @@ class OAuthController(BaseController):
         if not login_provider_id:
             raise UnauthorizedError("G2P-AUT-401", "Login Provider Id not received")
 
-        login_provider = await LoginProvider.get_login_provider_by_id(login_provider_id)
+        login_provider = await LoginProvider.get_by_id(login_provider_id)
         auth_parameters = OauthProviderParameters.model_validate(
             login_provider.authorization_parameters
         )

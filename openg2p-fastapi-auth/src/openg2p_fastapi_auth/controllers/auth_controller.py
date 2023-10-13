@@ -5,7 +5,7 @@ from typing import Annotated, List
 
 import httpx
 import orjson
-from fastapi import Depends, Response
+from fastapi import Depends
 from fastapi.responses import RedirectResponse
 from jose import jwt
 from openg2p_fastapi_common.controller import BaseController
@@ -69,14 +69,17 @@ class AuthController(BaseController):
                         headers={"Authorization": f"Bearer {auth.credentials}"},
                     )
                     res.raise_for_status()
-                    if res.headers["content-type"] == "application/json":
+                    if res.headers["content-type"].startswith("application/json"):
                         return BasicProfile.model_validate(res.json())
-                    if res.headers["content-type"] == "application/jwt":
+                    if res.headers["content-type"].startswith("application/jwt"):
                         return BasicProfile.model_validate(
                             jwt.decode(
                                 res.content,
+                                # jwks_cache.get().get(auth.iss),
+                                # TODO: Skipping this jwt validation. Some errors.
                                 None,
                                 options={
+                                    "verify_signature": False,
                                     "verify_aud": False,
                                     "verify_nbf": False,
                                     "verify_iss": False,
@@ -98,9 +101,9 @@ class AuthController(BaseController):
     async def logout(
         self,
         auth: Annotated[AuthCredentials, Depends(JwtBearerAuth())],
-        response: Response,
     ):
         config_dict = _config.model_dump()
+        response = RedirectResponse(config_dict.get("auth_logout_url", "/"))
         response.set_cookie(
             "X-Access-Token",
             None,
@@ -117,10 +120,10 @@ class AuthController(BaseController):
             httponly=config_dict.get("auth_cookie_httponly", True),
             secure=config_dict.get("auth_cookie_secure", False),
         )
-        return
+        return response
 
     async def get_login_providers(self):
-        login_providers: List[LoginProvider] = await LoginProvider.get_login_providers()
+        login_providers: List[LoginProvider] = await LoginProvider.get_all()
         return LoginProviderHttpResponse(
             loginProviders=[
                 LoginProviderResponse(
@@ -137,7 +140,7 @@ class AuthController(BaseController):
     async def get_login_provider_redirect(self, id: int, redirect_uri: str = "/"):
         login_provider = None
         try:
-            login_provider = await LoginProvider.get_login_provider_by_id(id)
+            login_provider = await LoginProvider.get_by_id(id)
         except Exception:
             _logger.exception("Login Provider fetching: Invalid Id")
             return None
