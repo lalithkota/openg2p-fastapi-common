@@ -8,10 +8,10 @@ import orjson
 from fastapi import Depends, Response
 from fastapi.responses import RedirectResponse
 from jose import jwt
-from openg2p_fastapi_common.config import Settings
 from openg2p_fastapi_common.controller import BaseController
 from openg2p_fastapi_common.errors.base_exception import BaseAppException
 
+from ..config import Settings
 from ..dependencies import JwtBearerAuth
 from ..models.credentials import AuthCredentials
 from ..models.login_provider import LoginProviderHttpResponse, LoginProviderResponse
@@ -54,7 +54,7 @@ class AuthController(BaseController):
 
     async def get_profile(
         self,
-        auth: Annotated[AuthCredentials, Depends(JwtBearerAuth)],
+        auth: Annotated[AuthCredentials, Depends(JwtBearerAuth())],
         online: bool = True,
     ):
         provider = await LoginProvider.get_login_provider_from_iss(auth.iss)
@@ -73,7 +73,17 @@ class AuthController(BaseController):
                         return BasicProfile.model_validate(res.json())
                     if res.headers["content-type"] == "application/jwt":
                         return BasicProfile.model_validate(
-                            jwt.decode(res.content, None)
+                            jwt.decode(
+                                res.content,
+                                None,
+                                options={
+                                    "verify_aud": False,
+                                    "verify_nbf": False,
+                                    "verify_iss": False,
+                                    "verify_sub": False,
+                                    "verify_jti": False,
+                                },
+                            )
                         )
                 except Exception as e:
                     _logger.exception("Error fetching user profile.")
@@ -88,7 +98,7 @@ class AuthController(BaseController):
 
     async def logout(
         self,
-        auth: Annotated[AuthCredentials, Depends(JwtBearerAuth)],
+        auth: Annotated[AuthCredentials, Depends(JwtBearerAuth())],
         response: Response,
     ):
         config_dict = _config.model_dump()
@@ -145,13 +155,13 @@ class AuthController(BaseController):
                 "code_verifier": auth_parameters.code_verifier,
                 "code_challenge": auth_parameters.code_challenge,
                 "code_challenge_method": auth_parameters.code_challenge_method,
+                "state": orjson.dumps(
+                    {
+                        "p": login_provider.id,
+                        "r": redirect_uri,
+                    }
+                ).decode(),
             }
-            auth_parameters["state"] = orjson.dumps(
-                {
-                    "p": login_provider.id,
-                    "r": redirect_uri,
-                }
-            ).decode()
 
             authorize_query_params.update(auth_parameters.extra_authorize_parameters)
             return RedirectResponse(

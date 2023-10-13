@@ -3,13 +3,13 @@ from datetime import datetime, timedelta
 
 import httpx
 import orjson
-from fastapi import Request, Response
+from fastapi import Request
 from fastapi.responses import RedirectResponse
 from jose import jwt
-from openg2p_fastapi_common.config import Settings
 from openg2p_fastapi_common.controller import BaseController
 from openg2p_fastapi_common.errors.http_exceptions import UnauthorizedError
 
+from ..config import Settings
 from ..models.orm.login_provider import LoginProvider, LoginProviderTypes
 from ..models.provider_auth_parameters import (
     OauthClientAssertionType,
@@ -32,7 +32,7 @@ class OAuthController(BaseController):
             methods=["GET"],
         )
 
-    async def oauth_callback(self, request: Request, response: Response):
+    async def oauth_callback(self, request: Request):
         query_params = request.query_params
         state = orjson.loads(query_params.get("state", "{}"))
         login_provider_id = state.get("p", None)
@@ -80,7 +80,7 @@ class OAuthController(BaseController):
                 res = httpx.post(
                     auth_parameters.token_endpoint,
                     auth=token_auth,
-                    data=dict(token_request_data),
+                    data=orjson.loads(orjson.dumps(token_request_data)),
                 )
                 res.raise_for_status()
                 res = res.json()
@@ -98,8 +98,20 @@ class OAuthController(BaseController):
 
             config_dict = _config.model_dump()
             access_token_payload = jwt.decode(
-                access_token, None, options={"verify_signature": False}
+                access_token,
+                None,
+                options={
+                    "verify_signature": False,
+                    "verify_aud": False,
+                    "verify_iat": False,
+                    "verify_exp": False,
+                    "verify_nbf": False,
+                    "verify_iss": False,
+                    "verify_sub": False,
+                    "verify_jti": False,
+                },
             )
+            response = RedirectResponse(state.get("r", "/"))
             response.set_cookie(
                 "X-Access-Token",
                 access_token,
@@ -119,6 +131,6 @@ class OAuthController(BaseController):
                 secure=config_dict.get("auth_cookie_secure", False),
             )
 
-            return RedirectResponse(state.get("r", "/"))
+            return response
         else:
             raise NotImplementedError()

@@ -24,3 +24,14 @@ class BadRequestError(BaseAppException):
         **kwargs
     ):
         super().__init__(code, message, http_status_code, **kwargs)
+
+
+class InternalServerError(BaseAppException):
+    def __init__(
+        self,
+        code="G2P-REQ-500",
+        message="Unknown Internal Server Error",
+        http_status_code=500,
+        **kwargs
+    ):
+        super().__init__(code, message, http_status_code, **kwargs)

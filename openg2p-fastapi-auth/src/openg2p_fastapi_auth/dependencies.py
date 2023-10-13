@@ -4,12 +4,13 @@ import httpx
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
-from openg2p_fastapi_common.config import Settings
 from openg2p_fastapi_common.errors.http_exceptions import (
     ForbiddenError,
+    InternalServerError,
     UnauthorizedError,
 )
 
+from .config import Settings
 from .context import jwks_cache
 from .models.credentials import AuthCredentials
 
@@ -26,7 +27,7 @@ class JwtBearerAuth(HTTPBearer):
 
         api_call_name = str(request.scope["route"].name)
 
-        api_auth_settings = config_dict.get("auth_api_" + api_call_name, None)
+        api_auth_settings = config_dict.get("auth_api_" + api_call_name, {})
 
         if (not api_auth_settings) or (not api_auth_settings.get("enabled", None)):
             return None
@@ -51,9 +52,21 @@ class JwtBearerAuth(HTTPBearer):
         if not jwt_token:
             raise UnauthorizedError()
 
-        unverified_payload = jwt.decode(
-            jwt_token, None, options={"verify_signature": False}
-        )
+        try:
+            unverified_payload = jwt.decode(
+                jwt_token,
+                None,
+                options={
+                    "verify_signature": False,
+                    "verify_aud": False,
+                    "verify_iss": False,
+                    "verify_sub": False,
+                },
+            )
+        except Exception as e:
+            raise UnauthorizedError(
+                message=f"Unauthorized. Jwt expired. {repr(e)}"
+            ) from e
         iss = unverified_payload["iss"]
         aud = unverified_payload.get("aud", None)
         if iss not in issuers_list:
@@ -66,24 +79,34 @@ class JwtBearerAuth(HTTPBearer):
         jwks = jwks_cache.get().get(iss, None)
 
         if not jwks:
-            jwks_list_index = list(issuers_list).index(iss)
-            jwks_url = (
-                jwks_urls_list[jwks_list_index]
-                if jwks_list_index < len(jwks_urls_list)
-                else iss.rstrip("/") + "/.well-known/jwks.json"
-            )
             try:
+                jwks_list_index = list(issuers_list).index(iss)
+                jwks_url = (
+                    jwks_urls_list[jwks_list_index]
+                    if jwks_list_index < len(jwks_urls_list)
+                    else iss.rstrip("/") + "/.well-known/jwks.json"
+                )
+
                 res = httpx.get(jwks_url)
                 res.raise_for_status()
                 jwks = res.json()
-                jwks_cache.get().update(iss, jwks)
+                jwks_cache.get()[iss] = jwks
             except Exception as e:
-                raise UnauthorizedError(
-                    message=f"Unauthorized. Could not fetch Jwks. {repr(e)}"
+                raise InternalServerError(
+                    code="G2P-AUT-500",
+                    message=f"Something went wrong while trying to fetch Jwks. {repr(e)}",
                 ) from e
 
         try:
-            jwt.decode(jwt_token, jwks)
+            jwt.decode(
+                jwt_token,
+                jwks,
+                options={
+                    "verify_aud": False,
+                    "verify_iss": False,
+                    "verify_sub": False,
+                },
+            )
         except Exception as e:
             raise UnauthorizedError(
                 message=f"Unauthorized. Invalid Jwt. {repr(e)}"
@@ -91,7 +114,16 @@ class JwtBearerAuth(HTTPBearer):
 
         if jwt_id_token:
             try:
-                res = jwt.decode(jwt_id_token, jwks, access_token=jwt_token)
+                res = jwt.decode(
+                    jwt_id_token,
+                    jwks,
+                    access_token=jwt_token,
+                    options={
+                        "verify_aud": False,
+                        "verify_iss": False,
+                        "verify_sub": False,
+                    },
+                )
                 if res:
                     unverified_payload.update(res)
             except Exception as e:

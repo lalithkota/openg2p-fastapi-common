@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from openg2p_fastapi_common.context import dbengine
 from openg2p_fastapi_common.models import BaseORMModel
@@ -26,7 +26,7 @@ class LoginProvider(BaseORMModel):
     login_button_text: Mapped[str] = mapped_column(String())
     login_button_image_url: Mapped[str] = mapped_column(String())
 
-    authorization_parameters: Mapped[dict[str, Any]] = mapped_column(JSON(), default={})
+    authorization_parameters: Mapped[Dict[str, Any]] = mapped_column(JSON(), default={})
 
     active: Mapped[bool] = mapped_column(Boolean())
 

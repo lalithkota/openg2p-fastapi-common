@@ -1,15 +1,18 @@
+# ruff: noqa: E402
+
 """Module initializing auth for APIs"""
 
 import asyncio
 
+from .config import Settings
+
+_config = Settings.get_config(strict=False)
+
 from openg2p_fastapi_common.app import Initializer
-from openg2p_fastapi_common.config import Settings
 
 from .controllers.auth_controller import AuthController
 from .controllers.oauth_controller import OAuthController
 from .models.orm.login_provider import LoginProvider
-
-_config = Settings.get_config(strict=False)
 
 
 class Initializer(Initializer):
