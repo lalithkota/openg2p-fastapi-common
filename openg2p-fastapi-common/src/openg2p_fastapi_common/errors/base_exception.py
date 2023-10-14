@@ -1,5 +1,5 @@
 class BaseAppException(Exception):
-    def __init__(self, code, message, http_status_code=400, **kwargs):
+    def __init__(self, code, message, http_status_code=500, **kwargs):
         # TODO: Handle Multiple Exceptions
         super().__init__(message)
         self.code = code
