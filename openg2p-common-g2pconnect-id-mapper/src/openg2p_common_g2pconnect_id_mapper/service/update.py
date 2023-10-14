@@ -67,6 +67,8 @@ class MapperUpdateService(BaseService):
 
         if not mappings:
             txn_status.status = RequestStatusEnum.succ
+            if txn_status.callable_on_complete:
+                asyncio.create_task(txn_status.callable_on_complete(txn_status))
             return txn_status
 
         self.transaction_queue[txn_id] = txn_status
@@ -93,7 +95,8 @@ class MapperUpdateService(BaseService):
             try:
                 res = httpx.post(
                     _config.mapper_update_url,
-                    json=update_http_request.model_dump(),
+                    content=update_http_request.model_dump_json(),
+                    headers={"content-type": "application/json"},
                     timeout=_config.mapper_api_timeout_secs,
                 )
                 res.raise_for_status()

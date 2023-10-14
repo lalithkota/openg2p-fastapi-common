@@ -13,16 +13,14 @@ class Ack(Enum):
 
 
 class AccountProviderInfo(BaseModel):
-    description: Optional[str] = ""
     name: str
     code: str
-    subcode: str
-    additional_info: str
+    subcode: Optional[str] = ""
+    additional_info: Optional[str] = ""
 
 
 class AdditionalInfo(BaseModel):
-    description: Optional[str] = ""
-    name: str
+    key: str
     value: Union[int, float, str, bool, dict]
 
 
@@ -34,9 +32,11 @@ class RequestStatusEnum(Enum):
 
 
 class CommonResponse(BaseModel):
-    ack_status: Ack
+    # TODO: Not compatible with G2P Connect
+    # ack_status: Ack
+    ack_status: Optional[Ack] = None
     timestamp: datetime
-    error: Optional[ErrorResponse]
+    error: Optional[ErrorResponse] = None
     correlation_id: str
 
 
@@ -58,7 +58,7 @@ class TxnStatus(BaseModel):
     txn_id: str
     status: RequestStatusEnum
     refs: Dict[str, SingleTxnRefStatus]
-    callable_on_complete: Callable[["TxnStatus"], Coroutine] = None
+    callable_on_complete: Optional[Callable[["TxnStatus"], Coroutine]] = None
 
     def change_all_status(self, status: RequestStatusEnum):
         self.status = status

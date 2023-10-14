@@ -71,6 +71,8 @@ class MapperResolveService(BaseService):
 
         if not mappings:
             txn_status.status = RequestStatusEnum.succ
+            if txn_status.callable_on_complete:
+                asyncio.create_task(txn_status.callable_on_complete(txn_status))
             return txn_status
 
         self.transaction_queue[txn_id] = txn_status
@@ -99,7 +101,8 @@ class MapperResolveService(BaseService):
             try:
                 res = httpx.post(
                     _config.mapper_resolve_url,
-                    json=resolve_http_request.model_dump(),
+                    content=resolve_http_request.model_dump_json(),
+                    headers={"content-type": "application/json"},
                     timeout=_config.mapper_api_timeout_secs,
                 )
                 res.raise_for_status()
@@ -111,6 +114,11 @@ class MapperResolveService(BaseService):
                     txn_status.change_all_status(RequestStatusEnum.rjct)
                 else:
                     txn_status.change_all_status(RequestStatusEnum.pdng)
+            except httpx.ReadTimeout:
+                # TODO: There is a timeout problem with sunbird
+                _logger.exception(
+                    "Encountered timeout during ID Mapper resolve request"
+                )
             except Exception:
                 _logger.exception("Encountered error during ID Mapper resolve request")
                 txn_status.change_all_status(RequestStatusEnum.rjct)

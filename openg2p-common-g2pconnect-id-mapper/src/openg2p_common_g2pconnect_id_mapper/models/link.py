@@ -27,12 +27,13 @@ class SingleLinkRequest(BaseModel):
     fa: str
     name: Optional[str] = None
     phone_number: Optional[str] = None
-    additional_info: Optional[List[AdditionalInfo]]
-    locale: str = "en"
+    # TODO: Not compatible with G2P Connect
+    # additional_info: Optional[List[AdditionalInfo]] = []
+    additional_info: Optional[AdditionalInfo] = None
+    locale: str = "eng"
 
 
 class LinkRequest(BaseModel):
-    description: Optional[str] = ""
     transaction_id: str
     link_request: List[SingleLinkRequest]
 
@@ -48,15 +49,17 @@ class SingleLinkCallbackRequest(BaseModel):
     timestamp: datetime
     fa: str
     status: RequestStatusEnum
-    status_reason_code: Optional[LinkRequestStatusReasonCode]
-    status_reason_message: Optional[str]
-    additional_info: Optional[List[AdditionalInfo]]
-    locale: str = "en"
+    status_reason_code: Optional[LinkRequestStatusReasonCode] = None
+    status_reason_message: Optional[str] = ""
+    # TODO: Not compatible with G2P Connect
+    # additional_info: Optional[List[AdditionalInfo]] = []
+    additional_info: Optional[AdditionalInfo] = None
+    locale: str = "eng"
 
 
 class LinkCallbackRequest(BaseModel):
-    description: Optional[str] = ""
     transaction_id: str
+    correlation_id: Optional[str] = ""
     link_response: List[SingleLinkCallbackRequest]
 
 

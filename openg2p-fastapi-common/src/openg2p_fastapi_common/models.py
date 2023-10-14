@@ -11,19 +11,21 @@ from .context import dbengine
 
 
 class BaseORMModel(DeclarativeBase):
-    _enabled = True
+    __enabled__ = True
 
     def __init__(self, **kwargs):
         super(DeclarativeBase, self).__init__(**kwargs)
 
     @classmethod
     async def create_migrate(cls):
-        if cls._enabled:
+        if cls.__enabled__:
             async with dbengine.get().begin() as conn:
                 await conn.run_sync(cls.metadata.create_all)
 
 
 class BaseORMModelWithId(BaseORMModel):
+    __abstract__ = True
+
     id: Mapped[int] = mapped_column(primary_key=True)
     active: Mapped[bool] = mapped_column()
 
@@ -50,6 +52,8 @@ class BaseORMModelWithId(BaseORMModel):
 
 
 class BaseORMModelWithTimes(BaseORMModelWithId):
+    __abstract__ = True
+
     created_at: Mapped[datetime] = mapped_column(DateTime(), default=datetime.utcnow)
     updated_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(), default=datetime.utcnow

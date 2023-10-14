@@ -37,7 +37,12 @@ class BaseExceptionHandler(BaseComponent):
     async def request_validation_exception_handler(
         self, request, exc: RequestValidationError
     ):
-        _logger.exception("Received exception: %s", repr(exc))
+        _logger.error(
+            "Received exception: %s",
+            repr(exc),
+            extra={"props": {"exc_info": exc.errors()}},
+        )
+        # _logger.exception("Received exception: %s", repr(exc))
         errors = []
         for err in exc.errors():
             err_msg = err.get("msg")
