@@ -129,26 +129,21 @@ class MapperResolveService(BaseService):
     async def resolve_request_sync(
         self, mappings: List[MapperValue], loop_sleep=1, max_retries=10
     ) -> TxnStatus:
-        txn_status = TxnStatus(
-            txn_id="",
-            status=RequestStatusEnum.rcvd,
-            ref={},
-        )
+        txn_statuses = []
 
         async def wait_for_callback(rec_txn_status: TxnStatus):
-            txn_status.status = rec_txn_status.status
-            txn_status.txn_id = rec_txn_status.txn_id
-            txn_status.refs = txn_status.refs
-            txn_status.callable_on_complete = rec_txn_status.callable_on_complete
+            txn_statuses.append(rec_txn_status.model_copy(deep=True))
 
         await self.resolve_request(mappings, wait_for_callback)
 
         retry_count = 0
-        while (not txn_status.txn_id) and retry_count < max_retries:
+        while (not txn_statuses) and retry_count < max_retries:
             retry_count += 1
             await asyncio.sleep(loop_sleep)
 
-        if not txn_status.txn_id:
+        if not txn_statuses[0].txn_id:
             raise BaseAppException(
                 "G2P-MAP-101", "Max retries exhausted while resolving."
             )
+
+        return txn_statuses[0]
