@@ -37,7 +37,9 @@ class CommonResponse(BaseModel):
     ack_status: Optional[Ack] = None
     timestamp: datetime
     error: Optional[ErrorResponse] = None
-    correlation_id: str
+    # TODO: Not compatible with G2P Connect
+    # correlation_id: str
+    correlation_id: Optional[str] = None
 
 
 class CommonResponseMessage(BaseModel):
