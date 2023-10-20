@@ -23,6 +23,7 @@ class OauthProviderParameters(BaseModel):
         OauthClientAssertionType.client_secret
     )
     client_assertion_jwk: Optional[dict] = None
+    client_assertion_jwt_aud: Optional[str] = None
 
     response_type: str = "code"
     redirect_uri: str

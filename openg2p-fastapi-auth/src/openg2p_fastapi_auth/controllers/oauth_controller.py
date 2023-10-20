@@ -65,7 +65,8 @@ class OAuthController(BaseController):
                             {
                                 "iss": auth_parameters.client_id,
                                 "sub": auth_parameters.client_id,
-                                "aud": auth_parameters.token_endpoint,
+                                "aud": auth_parameters.client_assertion_jwt_aud
+                                or auth_parameters.token_endpoint,
                                 "exp": datetime.utcnow() + timedelta(hours=1),
                                 "iat": datetime.utcnow(),
                             },
