@@ -13,9 +13,6 @@ from .context import dbengine
 class BaseORMModel(DeclarativeBase):
     __enabled__ = True
 
-    def __init__(self, **kwargs):
-        super(DeclarativeBase, self).__init__(**kwargs)
-
     @classmethod
     async def create_migrate(cls):
         if cls.__enabled__:
