@@ -61,7 +61,7 @@ class Initializer:
                 "url": _config.openapi_license_url,
             },
             lifespan=self.fastapi_app_lifespan,
-            root_path=_config.openapi_root_path if _config.openapi_root_path else "/",
+            root_path=_config.openapi_root_path if _config.openapi_root_path else "",
         )
         json_logging.init_request_instrument(app)
         app_registry.set(app)

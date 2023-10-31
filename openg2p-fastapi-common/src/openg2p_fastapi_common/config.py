@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     openapi_contact_email: str = "info@openg2p.org"
     openapi_license_name: str = "Mozilla Public License 2.0"
     openapi_license_url: str = "https://www.mozilla.org/en-US/MPL/2.0/"
-    openapi_root_path: str = "/"
+    openapi_root_path: str = ""
     openapi_common_api_prefix: str = ""
 
     # If empty will be constructed like this
