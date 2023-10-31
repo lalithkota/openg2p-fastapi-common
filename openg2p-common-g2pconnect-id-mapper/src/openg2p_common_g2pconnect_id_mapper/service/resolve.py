@@ -55,10 +55,10 @@ class MapperResolveService(BaseService):
             )
             if mapping.id:
                 single_resolve_request.id = mapping.id
-            elif mapping.fa:
+            if mapping.fa:
                 single_resolve_request.fa = mapping.fa
             else:
-                # TODO: raise error
+                # TODO: raise error if neither id nor fa present
                 pass
             resolve_request.append(single_resolve_request)
 
@@ -141,7 +141,7 @@ class MapperResolveService(BaseService):
             retry_count += 1
             await asyncio.sleep(loop_sleep)
 
-        if not txn_statuses[0].txn_id:
+        if not txn_statuses or not txn_statuses[0].txn_id:
             raise BaseAppException(
                 "G2P-MAP-101", "Max retries exhausted while resolving."
             )

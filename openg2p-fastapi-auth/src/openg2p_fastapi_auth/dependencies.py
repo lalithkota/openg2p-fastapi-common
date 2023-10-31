@@ -122,6 +122,10 @@ class JwtBearerAuth(HTTPBearer):
                         "verify_aud": False,
                         "verify_iss": False,
                         "verify_sub": False,
+                        "verify_at_hash": api_auth_settings.get(
+                            "id_token_verify_at_hash",
+                            config_dict.get("default_id_token_verify_at_hash", True),
+                        ),
                     },
                 )
                 if res:
