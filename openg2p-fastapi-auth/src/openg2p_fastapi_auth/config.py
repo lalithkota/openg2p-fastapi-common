@@ -11,6 +11,7 @@ class ApiAuthSettings(BaseModel):
     audiences: Optional[List[str]] = None
     claim_name: Optional[str] = None
     claim_values: Optional[List[str]] = None
+    id_token_verify_at_hash: Optional[bool] = None
 
 
 class Settings(Settings):
@@ -23,6 +24,8 @@ class Settings(Settings):
     auth_default_issuers: List[str] = []
     auth_default_audiences: List[str] = []
     auth_default_jwks_urls: List[str] = []
+
+    auth_default_id_token_verify_at_hash: bool = True
 
     auth_api_get_profile: ApiAuthSettings = ApiAuthSettings(enabled=True)
     auth_api_logout: ApiAuthSettings = ApiAuthSettings(enabled=True)
