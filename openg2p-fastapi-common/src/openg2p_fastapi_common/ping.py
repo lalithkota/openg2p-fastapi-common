@@ -12,11 +12,10 @@ class PingController(BaseController):
     def __init__(self, name="", **kwargs):
         super().__init__(name, **kwargs)
 
-        self.router.prefix += "/ping"
         self.router.tags += ["ping"]
 
         self.router.add_api_route(
-            "/",
+            "/ping",
             self.get_ping,
             methods=["GET"],
         )
