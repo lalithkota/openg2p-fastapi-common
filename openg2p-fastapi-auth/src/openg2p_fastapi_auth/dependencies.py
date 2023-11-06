@@ -73,7 +73,14 @@ class JwtBearerAuth(HTTPBearer):
             raise UnauthorizedError(message="Unauthorized. Unknown Issuer.")
 
         if audiences_list:
-            if not (aud and aud in audiences_list):
+            if (
+                (not aud)
+                or (
+                    isinstance(aud, list)
+                    and not (set(audiences_list).issubset(set(aud)))
+                )
+                or (isinstance(aud, str) and aud not in audiences_list)
+            ):
                 raise UnauthorizedError(message="Unauthorized. Unknown Audience.")
 
         jwks = jwks_cache.get().get(iss, None)
