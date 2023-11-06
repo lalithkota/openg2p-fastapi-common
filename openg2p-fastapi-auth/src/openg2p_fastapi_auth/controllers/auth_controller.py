@@ -58,6 +58,7 @@ class AuthController(BaseController):
         online: bool = True,
     ):
         provider = await LoginProvider.get_login_provider_from_iss(auth.iss)
+        # TODO: Handle updating response with auth
         if provider.type == LoginProviderTypes.oauth2_auth_code:
             if online:
                 auth_params = OauthProviderParameters.model_validate(

@@ -19,6 +19,8 @@ class Settings(Settings):
         env_prefix="common_", env_file=".env", extra="allow"
     )
 
+    login_providers_table_name: str = "login_providers"
+
     auth_enabled: bool = True
 
     auth_default_issuers: List[str] = []
