@@ -6,21 +6,25 @@ from sqlalchemy import JSON, String
 from sqlalchemy import Enum as SaEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
+from ...config import Settings
+
+_config = Settings.get_config(strict=False)
+
 
 class LoginProviderTypes(Enum):
     oauth2_auth_code = "oauth2_auth_code"
 
 
 class LoginProvider(BaseORMModelWithTimes):
-    __tablename__ = "login_providers"
+    __tablename__ = _config.login_providers_table_name
 
     name: Mapped[str] = mapped_column(String())
     type: Mapped[LoginProviderTypes] = mapped_column(SaEnum(LoginProviderTypes))
 
     description: Mapped[Optional[str]] = mapped_column(String())
 
-    login_button_text: Mapped[str] = mapped_column(String())
-    login_button_image_url: Mapped[str] = mapped_column(String())
+    login_button_text: Mapped[Optional[str]] = mapped_column(String())
+    login_button_image_url: Mapped[Optional[str]] = mapped_column(String())
 
     authorization_parameters: Mapped[Dict[str, Any]] = mapped_column(JSON(), default={})
 

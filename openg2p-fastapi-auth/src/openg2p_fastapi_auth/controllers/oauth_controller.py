@@ -75,7 +75,10 @@ class OAuthController(BaseController):
                         ),
                     }
                 )
-            elif auth_parameters.client_assertion_type == "client_secret":
+            elif (
+                auth_parameters.client_assertion_type
+                == OauthClientAssertionType.client_secret
+            ):
                 token_auth = (auth_parameters.client_id, auth_parameters.client_secret)
             try:
                 res = httpx.post(
