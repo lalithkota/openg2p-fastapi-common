@@ -135,8 +135,7 @@ class JwtBearerAuth(HTTPBearer):
                         ),
                     },
                 )
-                if res:
-                    unverified_payload.update(res)
+                unverified_payload = self.combine_tokens(unverified_payload, res)
             except Exception as e:
                 raise UnauthorizedError(
                     message=f"Unauthorized. Invalid Jwt ID Token. {repr(e)}"
@@ -158,3 +157,37 @@ class JwtBearerAuth(HTTPBearer):
         unverified_payload["credentials"] = jwt_token
 
         return AuthCredentials.model_validate(unverified_payload)
+
+    @classmethod
+    def combine_token_dicts(cls, *token_dicts) -> dict:
+        res = None
+        for token_dict in token_dicts:
+            if token_dict:
+                if not res:
+                    res = token_dict
+                else:
+                    for k, v in token_dict.items():
+                        if v:
+                            res[k] = v
+        return res
+
+    @classmethod
+    def combine_tokens(cls, *tokens) -> dict:
+        return cls.combine_token_dicts(
+            *[
+                jwt.decode(
+                    token,
+                    None,
+                    options={
+                        "verify_signature": False,
+                        "verify_aud": False,
+                        "verify_iss": False,
+                        "verify_sub": False,
+                    },
+                )
+                if isinstance(token, str)
+                else token
+                for token in tokens
+                if token
+            ]
+        )

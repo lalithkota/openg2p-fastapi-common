@@ -27,7 +27,12 @@ class Settings(Settings):
     auth_default_audiences: List[str] = []
     auth_default_jwks_urls: List[str] = []
 
+    auth_cookie_max_age: Optional[int] = None
+    auth_cookie_set_expires: bool = False
+    auth_cookie_path: str = "/"
+    auth_cookie_httponly: bool = True
+    auth_cookie_secure: bool = True
+
     auth_default_id_token_verify_at_hash: bool = True
 
     auth_api_get_profile: ApiAuthSettings = ApiAuthSettings(enabled=True)
-    auth_api_logout: ApiAuthSettings = ApiAuthSettings(enabled=True)

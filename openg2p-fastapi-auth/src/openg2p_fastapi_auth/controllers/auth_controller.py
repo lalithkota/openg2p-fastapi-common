@@ -1,11 +1,11 @@
 import logging
 import secrets
 import urllib.parse
-from typing import Annotated, List
+from typing import Annotated, List, Union
 
 import httpx
 import orjson
-from fastapi import Depends
+from fastapi import Depends, Response
 from fastapi.responses import RedirectResponse
 from jose import jwt
 from openg2p_fastapi_common.controller import BaseController
@@ -58,70 +58,21 @@ class AuthController(BaseController):
         online: bool = True,
     ):
         provider = await LoginProvider.get_login_provider_from_iss(auth.iss)
-        # TODO: Handle updating response with auth
         if provider.type == LoginProviderTypes.oauth2_auth_code:
             if online:
-                auth_params = OauthProviderParameters.model_validate(
-                    provider.authorization_parameters
-                )
-                try:
-                    res = httpx.get(
-                        auth_params.validate_endpoint,
-                        headers={"Authorization": f"Bearer {auth.credentials}"},
+                return BasicProfile.model_validate(
+                    await self.get_oauth_validation_data(
+                        auth, iss=auth.iss, provider=provider, combine=True
                     )
-                    res.raise_for_status()
-                    if res.headers["content-type"].startswith("application/json"):
-                        return BasicProfile.model_validate(res.json())
-                    if res.headers["content-type"].startswith("application/jwt"):
-                        return BasicProfile.model_validate(
-                            jwt.decode(
-                                res.content,
-                                # jwks_cache.get().get(auth.iss),
-                                # TODO: Skipping this jwt validation. Some errors.
-                                None,
-                                options={
-                                    "verify_signature": False,
-                                    "verify_aud": False,
-                                    "verify_nbf": False,
-                                    "verify_iss": False,
-                                    "verify_sub": False,
-                                    "verify_jti": False,
-                                },
-                            )
-                        )
-                except Exception as e:
-                    _logger.exception("Error fetching user profile.")
-                    raise InternalServerError(
-                        "G2P-AUT-502",
-                        f"Error fetching userinfo. {repr(e)}",
-                    ) from e
-            return BasicProfile(**auth.model_dump())
+                )
+            else:
+                return BasicProfile.model_validate(auth.model_dump())
         else:
             raise NotImplementedError()
 
-    async def logout(
-        self,
-        auth: Annotated[AuthCredentials, Depends(JwtBearerAuth())],
-    ):
-        config_dict = _config.model_dump()
-        response = RedirectResponse(config_dict.get("auth_logout_url", "/"))
-        response.set_cookie(
-            "X-Access-Token",
-            None,
-            max_age=-1,
-            path=config_dict.get("auth_cookie_path", "/"),
-            httponly=config_dict.get("auth_cookie_httponly", True),
-            secure=config_dict.get("auth_cookie_secure", False),
-        )
-        response.set_cookie(
-            "X-ID-Token",
-            None,
-            max_age=-1,
-            path=config_dict.get("auth_cookie_path", "/"),
-            httponly=config_dict.get("auth_cookie_httponly", True),
-            secure=config_dict.get("auth_cookie_secure", False),
-        )
-        return response
+    async def logout(self, response: Response):
+        response.delete_cookie("X-Access-Token")
+        response.delete_cookie("X-ID-Token")
 
     async def get_login_providers(self):
         login_providers: List[LoginProvider] = await LoginProvider.get_all()
@@ -172,3 +123,66 @@ class AuthController(BaseController):
             )
         else:
             raise NotImplementedError()
+
+    async def get_oauth_validation_data(
+        self,
+        auth: Union[str, AuthCredentials],
+        id_token: str = None,
+        iss: str = None,
+        provider: LoginProvider = None,
+        combine=True,
+    ) -> dict:
+        access_token = auth.credentials if isinstance(auth, AuthCredentials) else auth
+        if not iss:
+            iss = (
+                jwt.decode(
+                    access_token,
+                    None,
+                    options={
+                        "verify_signature": False,
+                        "verify_aud": False,
+                        "verify_iss": False,
+                        "verify_sub": False,
+                    },
+                )["iss"]
+                if isinstance(auth, str)
+                else auth.iss
+            )
+        if not provider:
+            provider = await LoginProvider.get_login_provider_from_iss(iss)
+        auth_params = OauthProviderParameters.model_validate(
+            provider.authorization_parameters
+        )
+        try:
+            res = httpx.get(
+                auth_params.validate_endpoint,
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            res.raise_for_status()
+            if res.headers["content-type"].startswith("application/json"):
+                res = res.json()
+            if res.headers["content-type"].startswith("application/jwt"):
+                res = jwt.decode(
+                    res.content,
+                    # jwks_cache.get().get(auth.iss),
+                    # TODO: Skipping this jwt validation. Some errors.
+                    None,
+                    options={
+                        "verify_signature": False,
+                        "verify_aud": False,
+                        "verify_nbf": False,
+                        "verify_iss": False,
+                        "verify_sub": False,
+                        "verify_jti": False,
+                    },
+                )
+            if combine:
+                return JwtBearerAuth.combine_tokens(access_token, id_token, res)
+            else:
+                return res
+        except Exception as e:
+            _logger.exception("Error fetching user profile.")
+            raise InternalServerError(
+                "G2P-AUT-502",
+                f"Error fetching userinfo. {repr(e)}",
+            ) from e
