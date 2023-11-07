@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import orjson
@@ -40,11 +40,11 @@ class OAuthController(BaseController):
             raise UnauthorizedError("G2P-AUT-401", "Login Provider Id not received")
 
         login_provider = await LoginProvider.get_by_id(login_provider_id)
-        auth_parameters = OauthProviderParameters.model_validate(
-            login_provider.authorization_parameters
-        )
 
         if login_provider.type == LoginProviderTypes.oauth2_auth_code:
+            auth_parameters = OauthProviderParameters.model_validate(
+                login_provider.authorization_parameters
+            )
             token_request_data = {
                 "client_id": auth_parameters.client_id,
                 "grant_type": "authorization_code",
@@ -120,19 +120,27 @@ class OAuthController(BaseController):
                 "X-Access-Token",
                 access_token,
                 max_age=config_dict.get("auth_cookie_max_age", None),
-                expires=access_token_payload.get("exp", None),
+                expires=datetime.fromtimestamp(
+                    access_token_payload.get("exp", None), tz=timezone.utc
+                )
+                if config_dict.get("auth_cookie_set_expires", False)
+                else None,
                 path=config_dict.get("auth_cookie_path", "/"),
                 httponly=config_dict.get("auth_cookie_httponly", True),
-                secure=config_dict.get("auth_cookie_secure", False),
+                secure=config_dict.get("auth_cookie_secure", True),
             )
             response.set_cookie(
                 "X-ID-Token",
                 id_token,
                 max_age=config_dict.get("auth_cookie_max_age", None),
-                expires=access_token_payload.get("exp", None),
+                expires=datetime.fromtimestamp(
+                    access_token_payload.get("exp", None), tz=timezone.utc
+                )
+                if config_dict.get("auth_cookie_set_expires", False)
+                else None,
                 path=config_dict.get("auth_cookie_path", "/"),
                 httponly=config_dict.get("auth_cookie_httponly", True),
-                secure=config_dict.get("auth_cookie_secure", False),
+                secure=config_dict.get("auth_cookie_secure", True),
             )
 
             return response
