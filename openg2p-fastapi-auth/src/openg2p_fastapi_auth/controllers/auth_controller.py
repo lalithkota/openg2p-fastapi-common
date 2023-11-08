@@ -161,7 +161,7 @@ class AuthController(BaseController):
             response.raise_for_status()
             if response.headers["content-type"].startswith("application/json"):
                 res = response.json()
-            if response.headers["content-type"].startswith("application/jwt"):
+            elif response.headers["content-type"].startswith("application/jwt"):
                 res = jwt.decode(
                     res.content,
                     # jwks_cache.get().get(auth.iss),
