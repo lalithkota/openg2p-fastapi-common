@@ -154,14 +154,14 @@ class AuthController(BaseController):
             provider.authorization_parameters
         )
         try:
-            res = httpx.get(
+            response = httpx.get(
                 auth_params.validate_endpoint,
                 headers={"Authorization": f"Bearer {access_token}"},
             )
-            res.raise_for_status()
-            if res.headers["content-type"].startswith("application/json"):
-                res = res.json()
-            if res.headers["content-type"].startswith("application/jwt"):
+            response.raise_for_status()
+            if response.headers["content-type"].startswith("application/json"):
+                res = response.json()
+            if response.headers["content-type"].startswith("application/jwt"):
                 res = jwt.decode(
                     res.content,
                     # jwks_cache.get().get(auth.iss),
