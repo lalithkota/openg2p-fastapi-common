@@ -38,21 +38,25 @@ class Settings(BaseSettings):
     # If empty will be constructed like this
     # f"{db_driver}://{db_username}:{db_password}@{db_hostname}:{db_port}/{db_dbname}"
     db_datasource: Optional[str] = None
-    db_driver: str = "postgresql+asyncpg"
+    db_driver: Optional[str] = "postgresql+asyncpg"
     db_username: Optional[str] = None
     db_password: Optional[str] = None
-    db_hostname: str = "localhost"
-    db_port: int = 5432
+    db_hostname: Optional[str] = "localhost"
+    db_port: Optional[int] = 5432
     db_dbname: Optional[str] = None
-    db_logging: bool = False
+    db_logging: Optional[bool] = False
 
     @model_validator(mode="after")
     def validate_db_datasource(self) -> "Settings":
+        if self.db_datasource:
+            return self
         datasource = ""
-        datasource += f"{self.db_driver}://"
+        if self.db_driver:
+            datasource += f"{self.db_driver}://"
         if self.db_username:
             datasource += f"{self.db_username}:{self.db_password}@"
-        datasource += self.db_hostname
+        if self.db_hostname:
+            datasource += self.db_hostname
         if self.db_port:
             datasource += f":{self.db_port}"
         if self.db_dbname:

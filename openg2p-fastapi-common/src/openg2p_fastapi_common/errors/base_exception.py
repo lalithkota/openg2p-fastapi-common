@@ -1,13 +1,17 @@
-class BaseAppException(Exception):
-    def __init__(self, code, message, http_status_code=500, **kwargs):
+from fastapi import HTTPException
+
+
+class BaseAppException(HTTPException):
+    def __init__(self, code, message, http_status_code=500, headers=None, **kwargs):
         # TODO: Handle Multiple Exceptions
-        super().__init__(message)
+        super().__init__(
+            status_code=http_status_code, detail=message, headers=headers, **kwargs
+        )
         self.code = code
         self.message = message
-        self.http_status_code = http_status_code
 
     def __str__(self):
-        return f'{type(self).__name__}("{self.code}", "{self.message}")'
+        return f'{self.__class__.__name__}(code="{self.code}", message="{self.message}", https_status_code="{self.status_code}")'
 
     def __repr__(self):
-        return f'{type(self).__name__}("{self.code}", "{self.message}")'
+        return f'{self.__class__.__name__}(code="{self.code}", message="{self.message}", https_status_code="{self.status_code}")'
