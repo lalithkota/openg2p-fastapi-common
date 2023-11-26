@@ -183,6 +183,7 @@ class JwtBearerAuth(HTTPBearer):
                         "verify_aud": False,
                         "verify_iss": False,
                         "verify_sub": False,
+                        "verify_at_hash": False,
                     },
                 )
                 if isinstance(token, str)
