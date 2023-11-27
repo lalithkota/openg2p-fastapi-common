@@ -163,7 +163,7 @@ class AuthController(BaseController):
                 res = response.json()
             elif response.headers["content-type"].startswith("application/jwt"):
                 res = jwt.decode(
-                    res.content,
+                    response.content,
                     # jwks_cache.get().get(auth.iss),
                     # TODO: Skipping this jwt validation. Some errors.
                     None,
