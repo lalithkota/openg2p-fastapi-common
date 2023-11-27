@@ -10,6 +10,7 @@ import uvicorn
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from .component import BaseComponent
 from .config import Settings
 from .context import app_registry, dbengine
 from .exception import BaseExceptionHandler
@@ -18,8 +19,9 @@ _config = Settings.get_config(strict=False)
 _logger = logging.getLogger(__name__)
 
 
-class Initializer:
-    def __init__(self):
+class Initializer(BaseComponent):
+    def __init__(self, name="", **kwargs):
+        super().__init__(name=name, **kwargs)
         self.initialize()
 
     def initialize(self):
@@ -44,8 +46,11 @@ class Initializer:
         return logger
 
     def init_db(self):
-        db_engine = create_async_engine(_config.db_datasource, echo=_config.db_logging)
-        dbengine.set(db_engine)
+        if _config.db_datasource:
+            db_engine = create_async_engine(
+                _config.db_datasource, echo=_config.db_logging
+            )
+            dbengine.set(db_engine)
 
     def init_app(self):
         app = FastAPI(

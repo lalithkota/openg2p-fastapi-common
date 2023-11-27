@@ -2,10 +2,19 @@ import logging
 
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import ORJSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .component import BaseComponent
 from .context import app_registry
 from .errors import BaseAppException, ErrorListResponse, ErrorResponse
+from .errors.http_exceptions import (
+    BadRequestError,
+    ForbiddenError,
+    InternalServerError,
+    MethodNotAllowedError,
+    NotFoundError,
+    UnauthorizedError,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -15,6 +24,7 @@ class BaseExceptionHandler(BaseComponent):
         super().__init__(name=name)
 
         app = app_registry.get()
+        app.add_exception_handler(StarletteHTTPException, self.http_exception_handler)
         app.add_exception_handler(BaseAppException, self.base_exception_handler)
         app.add_exception_handler(
             RequestValidationError, self.request_validation_exception_handler
@@ -31,7 +41,12 @@ class BaseExceptionHandler(BaseComponent):
             errors=[ErrorResponse(code=exc.code, message=exc.message)]
         )
         return ORJSONResponse(
-            content=res.model_dump(), status_code=exc.http_status_code
+            content=res.model_dump(), status_code=exc.status_code, headers=exc.headers
+        )
+
+    async def http_exception_handler(self, request, exc: StarletteHTTPException):
+        return await self.base_exception_handler(
+            request, self.map_http_to_base_exception(exc)
         )
 
     async def request_validation_exception_handler(
@@ -78,3 +93,30 @@ class BaseExceptionHandler(BaseComponent):
             message = exc_split[0]
         res = ErrorListResponse(errors=[ErrorResponse(code=code, message=message)])
         return ORJSONResponse(content=res.model_dump(), status_code=500)
+
+    def map_http_to_base_exception(
+        self, exc: StarletteHTTPException
+    ) -> BaseAppException:
+        if exc.status_code == 400:
+            final_exc = BadRequestError(headers=exc.headers)
+        elif exc.status_code == 401:
+            final_exc = UnauthorizedError(headers=exc.headers)
+        elif exc.status_code == 403:
+            final_exc = ForbiddenError(headers=exc.headers)
+        elif exc.status_code == 404:
+            final_exc = NotFoundError(headers=exc.headers)
+        elif exc.status_code == 405:
+            final_exc = MethodNotAllowedError(headers=exc.headers)
+        elif exc.status_code == 500:
+            final_exc = InternalServerError(headers=exc.headers)
+        else:
+            final_exc = BaseAppException(
+                code="G2P-REQ-100",
+                message="Unknown HTTP Exception",
+                http_status_code=exc.status_code,
+                headers=exc.headers,
+            )
+        if exc.detail:
+            final_exc.detail = exc.detail
+            final_exc.message = exc.detail
+        return final_exc

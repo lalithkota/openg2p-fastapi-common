@@ -6,10 +6,12 @@ from datetime import datetime
 from openg2p_fastapi_common.controller import BaseController
 from openg2p_fastapi_common.errors.base_error import ErrorResponse
 
+from ..config import Settings
 from ..models.common import Ack, CommonResponse, CommonResponseMessage
 from ..models.link import LinkCallbackHttpRequest
 from ..service.link import MapperLinkService
 
+_config = Settings.get_config(strict=False)
 _logger = logging.getLogger(__name__)
 
 
@@ -18,7 +20,7 @@ class LinkCallbackController(BaseController):
         super().__init__(**kwargs)
         self.mapper_link_service = MapperLinkService.get_component()
 
-        self.router.prefix += "/callback"
+        self.router.prefix += _config.callback_api_common_prefix
         self.router.tags += ["callback"]
 
         self.router.add_api_route(
