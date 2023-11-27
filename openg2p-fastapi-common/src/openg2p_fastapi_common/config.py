@@ -73,9 +73,11 @@ class Settings(BaseSettings):
             if strict:
                 if cls is type(config):
                     result = config
+                    break
             else:
                 if isinstance(config, cls):
                     result = config
+                    break
         if not result:
             result = cls()
             config_registry.get().append(result)
