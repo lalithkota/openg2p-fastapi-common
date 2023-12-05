@@ -1,14 +1,19 @@
 import asyncio
 import logging
+import time
 import uuid
 from datetime import datetime
-from typing import Callable, Coroutine, Dict, List
+from typing import Callable, Coroutine, List
 
 import httpx
+import orjson
+import redis
+import redis.asyncio as redis_asyncio
 from openg2p_fastapi_common.errors.base_exception import BaseAppException
 from openg2p_fastapi_common.service import BaseService
 
 from ..config import Settings
+from ..context import queue_redis_async_pool, queue_redis_conn_pool
 from ..models.common import (
     Ack,
     CommonResponseMessage,
@@ -25,23 +30,20 @@ _config = Settings.get_config(strict=False)
 
 
 class MapperUpdateService(BaseService):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # TODO: Do garbage collection for this
-        self.transaction_queue: Dict[str, TxnStatus] = {}
-
-    async def update_request(
+    def get_new_update_request(
         self,
         mappings: List[MapperValue],
         callback_func: Callable[[TxnStatus], Coroutine] = None,
-    ) -> TxnStatus:
+        txn_id: str = None,
+    ):
         current_timestamp = datetime.utcnow()
 
         update_request = []
         txn_statuses = {}
         total_count = len(mappings)
 
-        txn_id = str(uuid.uuid4())
+        if not txn_id:
+            txn_id = str(uuid.uuid4())
         for mapping in mappings:
             reference_id = str(uuid.uuid4())
             txn_statuses[reference_id] = SingleTxnRefStatus(
@@ -57,87 +59,137 @@ class MapperUpdateService(BaseService):
                     fa=mapping.fa,
                 )
             )
-
         txn_status = TxnStatus(
             txn_id=txn_id,
             status=RequestStatusEnum.rcvd,
             refs=txn_statuses,
-            callable_on_complete=callback_func,
+            callable_on_complete=callback_func.__name__ if callback_func else None,
+        )
+
+        update_http_request = (
+            UpdateHttpRequest(
+                signature='Signature:  namespace="g2p", '
+                'kidId="{sender_id}|{unique_key_id}|{algorithm}", '
+                'algorithm="ed25519", created="1606970629", '
+                'expires="1607030629", '
+                'headers="(created) '
+                '(expires) digest", '
+                'signature="Base64(signing content)',
+                header=MsgHeader(
+                    message_id=str(uuid.uuid4()),
+                    message_ts=current_timestamp,
+                    action="update",
+                    sender_id=_config.mapper_common_sender_id,
+                    sender_uri=_config.mapper_update_sender_url,
+                    total_count=total_count,
+                ),
+                message=UpdateRequest(
+                    transaction_id=txn_id, update_request=update_request
+                ),
+            )
+            if mappings
+            else None
+        )
+
+        return update_http_request, txn_status
+
+    async def update_request(
+        self,
+        mappings: List[MapperValue],
+        callback_func: Callable[[TxnStatus], Coroutine] = None,
+        txn_id: str = None,
+    ) -> TxnStatus:
+        update_http_request, txn_status = self.get_new_update_request(
+            mappings, callback_func, txn_id
+        )
+
+        queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool.get())
+        await queue.set(
+            f"{_config.queue_update_name}{txn_status.txn_id}",
+            orjson.dumps(txn_status.model_dump()).decode(),
+        )
+        await queue.aclose()
+
+        if not mappings:
+            txn_status.status = RequestStatusEnum.succ
+            if callback_func:
+                asyncio.create_task(callback_func(txn_status))
+            return txn_status
+
+        async def update_start():
+            self.start_update_process(update_http_request, txn_status)
+
+        asyncio.create_task(update_start())
+        return txn_status
+
+    def update_request_sync(
+        self,
+        mappings: List[MapperValue],
+        txn_id: str = None,
+        loop_sleep=1,
+        max_retries=10,
+    ) -> TxnStatus:
+        update_http_request, txn_status = self.get_new_update_request(
+            mappings, callback_func=None, txn_id=txn_id
+        )
+
+        queue = redis.Redis(connection_pool=queue_redis_conn_pool.get())
+        queue.set(
+            f"{_config.queue_update_name}{txn_status.txn_id}",
+            orjson.dumps(txn_status.model_dump()).decode(),
         )
 
         if not mappings:
             txn_status.status = RequestStatusEnum.succ
-            if txn_status.callable_on_complete:
-                asyncio.create_task(txn_status.callable_on_complete(txn_status))
+            queue.close()
             return txn_status
 
-        self.transaction_queue[txn_id] = txn_status
-        update_http_request = UpdateHttpRequest(
-            signature='Signature:  namespace="g2p", '
-            'kidId="{sender_id}|{unique_key_id}|{algorithm}", '
-            'algorithm="ed25519", created="1606970629", '
-            'expires="1607030629", '
-            'headers="(created) '
-            '(expires) digest", '
-            'signature="Base64(signing content)',
-            header=MsgHeader(
-                message_id=str(uuid.uuid4()),
-                message_ts=current_timestamp,
-                action="update",
-                sender_id=_config.mapper_common_sender_id,
-                sender_uri=_config.mapper_update_sender_url,
-                total_count=total_count,
-            ),
-            message=UpdateRequest(transaction_id=txn_id, update_request=update_request),
-        )
-
-        async def start_update_process():
-            try:
-                res = httpx.post(
-                    _config.mapper_update_url,
-                    content=update_http_request.model_dump_json(),
-                    headers={"content-type": "application/json"},
-                    timeout=_config.mapper_api_timeout_secs,
-                )
-                res.raise_for_status()
-                res = CommonResponseMessage.model_validate(res.json())
-                if res.message.ack_status != Ack.ACK:
-                    _logger.error(
-                        "Encountered negative ACK from ID Mapper during update request"
-                    )
-                    txn_status.change_all_status(RequestStatusEnum.rjct)
-                else:
-                    txn_status.change_all_status(RequestStatusEnum.pdng)
-            except Exception:
-                _logger.exception("Encountered error during ID Mapper update request")
-                txn_status.change_all_status(RequestStatusEnum.rjct)
-
-        asyncio.create_task(start_update_process())
-        return txn_status
-
-    async def update_request_sync(
-        self, mappings: List[MapperValue], loop_sleep=1, max_retries=10
-    ) -> TxnStatus:
-        txn_status = TxnStatus(
-            txn_id="",
-            status=RequestStatusEnum.rcvd,
-            ref={},
-        )
-
-        async def wait_for_callback(rec_txn_status: TxnStatus):
-            txn_status.status = rec_txn_status.status
-            txn_status.txn_id = rec_txn_status.txn_id
-            txn_status.refs = txn_status.refs
-            txn_status.callable_on_complete = rec_txn_status.callable_on_complete
-
-        await self.update_request(mappings, wait_for_callback)
+        self.start_update_process(update_http_request, txn_status)
 
         retry_count = 0
-        while (not txn_status.txn_id) and retry_count < max_retries:
+        while retry_count < max_retries:
+            res_txn_status = orjson.loads(
+                queue.get(f"{_config.queue_link_name}{txn_status.txn_id}")
+            )["status"]
+            if res_txn_status in (
+                RequestStatusEnum.succ.value,
+                RequestStatusEnum.rjct.value,
+            ):
+                queue.close()
+                return TxnStatus.model_validate(
+                    orjson.loads(
+                        queue.get(f"{_config.queue_update_name}{txn_status.txn_id}")
+                    )
+                )
             retry_count += 1
-            await asyncio.sleep(loop_sleep)
+            if loop_sleep:
+                time.sleep(loop_sleep)
 
-        if not txn_status.txn_id:
-            raise BaseAppException(
-                "G2P-MAP-103", "Max retries exhausted while updating."
+        queue.close()
+        raise BaseAppException("G2P-MAP-103", "Max retries exhausted while updating.")
+
+    async def start_update_process(
+        self, update_http_request: UpdateHttpRequest, txn_status: TxnStatus
+    ):
+        try:
+            res = httpx.post(
+                _config.mapper_update_url,
+                content=update_http_request.model_dump_json(),
+                headers={"content-type": "application/json"},
+                timeout=_config.mapper_api_timeout_secs,
             )
+            res.raise_for_status()
+            res = CommonResponseMessage.model_validate(res.json())
+            if res.message.ack_status != Ack.ACK:
+                _logger.error(
+                    "Encountered negative ACK from ID Mapper during update request"
+                )
+                txn_status.change_all_status(RequestStatusEnum.rjct)
+            else:
+                txn_status.change_all_status(RequestStatusEnum.pdng)
+        except httpx.ReadTimeout:
+            # TODO: There is a timeout problem with sunbird
+            _logger.exception("Encountered timeout during ID Mapper update request")
+        except Exception:
+            _logger.exception("Encountered error during ID Mapper update request")
+            txn_status.change_all_status(RequestStatusEnum.rjct)

@@ -3,11 +3,21 @@ import logging
 import uuid
 from datetime import datetime
 
+import orjson
+import redis.asyncio as redis_asyncio
 from openg2p_fastapi_common.controller import BaseController
 from openg2p_fastapi_common.errors.base_error import ErrorResponse
+from openg2p_fastapi_common.errors.base_exception import BaseAppException
 
 from ..config import Settings
-from ..models.common import Ack, CommonResponse, CommonResponseMessage
+from ..context import queue_redis_async_pool, queue_registered_callbacks
+from ..models.common import (
+    Ack,
+    CommonResponse,
+    CommonResponseMessage,
+    RequestStatusEnum,
+    TxnStatus,
+)
 from ..models.link import LinkCallbackHttpRequest
 from ..service.link import MapperLinkService
 
@@ -32,8 +42,9 @@ class LinkCallbackController(BaseController):
 
     async def mapper_on_link(self, link_http_request: LinkCallbackHttpRequest):
         txn_id = link_http_request.message.transaction_id
-        txn_status = self.mapper_link_service.transaction_queue.get(txn_id, None)
-        if not txn_status:
+        queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool)
+
+        if not await queue.exists(f"{_config.queue_link_name}{txn_id}"):
             _logger.error("On Link. Invalid Txn id received.")
             return CommonResponseMessage(
                 message=CommonResponse(
@@ -46,6 +57,10 @@ class LinkCallbackController(BaseController):
                     ),
                 )
             )
+
+        txn_status = TxnStatus.model_validate(
+            orjson.loads(await queue.get(f"{_config.queue_link_name}{txn_id}"))
+        )
         txn_status.status = link_http_request.header.status
 
         for txn in link_http_request.message.link_response:
@@ -60,8 +75,38 @@ class LinkCallbackController(BaseController):
             if txn.fa:
                 txn_status.refs[txn.reference_id].fa = txn.fa
 
+        if (not txn_status.status) or (txn_status.status == RequestStatusEnum.rcvd):
+            success_count = 0
+            pending_count = 0
+            for ref in txn_status.refs.values():
+                if ref.status not in (RequestStatusEnum.succ, RequestStatusEnum.rjct):
+                    pending_count += 1
+                if ref.status == RequestStatusEnum.succ:
+                    success_count += 1
+            if success_count == 0 and pending_count == 0:
+                txn_status.status = RequestStatusEnum.rjct
+            elif pending_count == 0:
+                txn_status.status = RequestStatusEnum.succ
+            else:
+                # TODO: Something went wrong. Pending count can not be > 0
+                pass
+
+        await queue.set(
+            f"{_config.queue_link_name}{txn_id}",
+            orjson.dumps(txn_status.model_dump()).decode(),
+        )
+        await queue.aclose()
+
         if txn_status.callable_on_complete:
-            asyncio.create_task(txn_status.callable_on_complete(txn_status))
+            callback_func = queue_registered_callbacks.get().get(
+                txn_status.callable_on_complete, None
+            )
+            if not callback_func:
+                raise BaseAppException(
+                    "G2P-MAP-120",
+                    "Invalid Callback Function. Callback function needs to be registered.",
+                )
+            asyncio.create_task(callback_func(txn_status))
 
         return CommonResponseMessage(
             message=CommonResponse(

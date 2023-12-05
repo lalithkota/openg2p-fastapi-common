@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from .component import BaseComponent
 from .config import Settings
-from .context import app_registry, dbengine
+from .context import app_registry, component_registry, dbengine
 from .exception import BaseExceptionHandler
 
 _config = Settings.get_config(strict=False)
@@ -109,9 +109,22 @@ class Initializer(BaseComponent):
         with open(args.filepath, "wb+") as f:
             f.write(orjson.dumps(app.openapi(), option=orjson.OPT_INDENT_2))
 
+    async def fastapi_app_startup(self, app: FastAPI):
+        # Overload this method to execute something on startup
+        pass
+
+    async def fastapi_app_shutdown(self, app: FastAPI):
+        # Overload this method to execute something on shutdown
+        if dbengine.get():
+            await dbengine.get().dispose()
+            dbengine.set(None)
+
     @asynccontextmanager
     async def fastapi_app_lifespan(self, app: FastAPI):
-        # Do nothing before startup
+        for initializer in component_registry.get():
+            if isinstance(initializer, Initializer):
+                await initializer.fastapi_app_startup(app)
         yield
-        # Dispose database connection on shutdown
-        await dbengine.get().dispose()
+        for initializer in component_registry.get():
+            if isinstance(initializer, Initializer):
+                await initializer.fastapi_app_shutdown(app)
