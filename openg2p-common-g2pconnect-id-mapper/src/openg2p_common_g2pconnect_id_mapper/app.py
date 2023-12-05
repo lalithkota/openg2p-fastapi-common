@@ -13,7 +13,6 @@ from openg2p_fastapi_common.app import Initializer
 from .context import (
     queue_redis_async_pool,
     queue_redis_conn_pool,
-    queue_registered_callbacks,
 )
 from .controllers.link_callback import LinkCallbackController
 from .controllers.resolve_callback import ResolveCallbackController
@@ -21,7 +20,6 @@ from .controllers.update_callback import UpdateCallbackController
 from .service.link import MapperLinkService
 from .service.resolve import MapperResolveService
 from .service.update import MapperUpdateService
-from .service.update_link import MapperUpdateOrLinkService
 
 
 class Initializer(Initializer):
@@ -32,7 +30,6 @@ class Initializer(Initializer):
         MapperResolveService()
         MapperLinkService()
         MapperUpdateService()
-        self.mapper_update_link_service = MapperUpdateOrLinkService()
 
         LinkCallbackController().post_init()
         UpdateCallbackController().post_init()
@@ -53,22 +50,3 @@ class Initializer(Initializer):
         if queue_redis_async_pool.get():
             await queue_redis_async_pool.get().aclose()
             queue_redis_async_pool.set(None)
-
-    def register_callbacks(self):
-        callback_func = (
-            self.mapper_update_link_service.update_link_service_on_link_callback
-        )
-        callback_name = callback_func.__name__
-        queue_registered_callbacks.get()[callback_name] = callback_func
-
-        callback_func = (
-            self.mapper_update_link_service.update_link_service_on_update_callback
-        )
-        callback_name = callback_func.__name__
-        queue_registered_callbacks.get()[callback_name] = callback_func
-
-        callback_func = (
-            self.mapper_update_link_service.update_link_service_on_resolve_callback
-        )
-        callback_name = callback_func.__name__
-        queue_registered_callbacks.get()[callback_name] = callback_func

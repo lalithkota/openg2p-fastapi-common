@@ -3,7 +3,7 @@ import logging
 import time
 import uuid
 from datetime import datetime
-from typing import Callable, Coroutine, List
+from typing import List
 
 import httpx
 import orjson
@@ -33,7 +33,6 @@ class MapperResolveService(BaseService):
     def get_new_resolve_request(
         self,
         mappings: List[MapperValue],
-        callback_func: Callable[[TxnStatus], Coroutine] = None,
         txn_id: str = None,
     ):
         current_timestamp = datetime.utcnow()
@@ -68,7 +67,6 @@ class MapperResolveService(BaseService):
             txn_id=txn_id,
             status=RequestStatusEnum.rcvd,
             refs=txn_statuses,
-            callable_on_complete=callback_func.__name__ if callback_func else None,
         )
 
         resolve_http_request = (
@@ -101,11 +99,10 @@ class MapperResolveService(BaseService):
     async def resolve_request(
         self,
         mappings: List[MapperValue],
-        callback_func: Callable[[TxnStatus], Coroutine] = None,
         txn_id: str = None,
     ) -> TxnStatus:
         resolve_http_request, txn_status = self.get_new_resolve_request(
-            mappings, callback_func, txn_id
+            mappings, txn_id
         )
 
         queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool.get())
@@ -117,8 +114,6 @@ class MapperResolveService(BaseService):
 
         if not mappings:
             txn_status.status = RequestStatusEnum.succ
-            if callback_func:
-                asyncio.create_task(callback_func(txn_status))
             return txn_status
 
         async def resolve_start():

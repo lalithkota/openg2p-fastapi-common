@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import uuid
 from datetime import datetime
@@ -7,10 +6,9 @@ import orjson
 import redis.asyncio as redis_asyncio
 from openg2p_fastapi_common.controller import BaseController
 from openg2p_fastapi_common.errors.base_error import ErrorResponse
-from openg2p_fastapi_common.errors.base_exception import BaseAppException
 
 from ..config import Settings
-from ..context import queue_redis_async_pool, queue_registered_callbacks
+from ..context import queue_redis_async_pool
 from ..models.common import (
     Ack,
     CommonResponse,
@@ -95,17 +93,6 @@ class UpdateCallbackController(BaseController):
             orjson.dumps(txn_status.model_dump()).decode(),
         )
         await queue.aclose()
-
-        if txn_status.callable_on_complete:
-            callback_func = queue_registered_callbacks.get().get(
-                txn_status.callable_on_complete, None
-            )
-            if not callback_func:
-                raise BaseAppException(
-                    "G2P-MAP-120",
-                    "Invalid Callback Function. Callback function needs to be registered.",
-                )
-            asyncio.create_task(callback_func(txn_status))
 
         return CommonResponseMessage(
             message=CommonResponse(

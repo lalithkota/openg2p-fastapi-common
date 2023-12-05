@@ -60,7 +60,6 @@ class TxnStatus(BaseModel):
     txn_id: str
     status: RequestStatusEnum
     refs: Dict[str, SingleTxnRefStatus]
-    callable_on_complete: Optional[str] = None
 
     def change_all_status(self, status: RequestStatusEnum):
         self.status = status

@@ -31,7 +31,6 @@ class Settings(Settings):
     queue_link_name: str = "mapper-link:"
     queue_resolve_name: str = "mapper-resolve:"
     queue_update_name: str = "mapper-update:"
-    queue_update_link_name: str = "mapper-update-link:"
 
     @model_validator(mode="after")
     def validate_queue_redis_source(self) -> "Settings":

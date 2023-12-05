@@ -3,7 +3,7 @@ import logging
 import time
 import uuid
 from datetime import datetime
-from typing import Callable, Coroutine, List
+from typing import List
 
 import httpx
 import orjson
@@ -33,7 +33,6 @@ class MapperLinkService(BaseService):
     def get_new_link_request(
         self,
         mappings: List[MapperValue],
-        callback_func: Callable[[TxnStatus], Coroutine] = None,
         txn_id: str = None,
     ):
         current_timestamp = datetime.utcnow()
@@ -63,7 +62,6 @@ class MapperLinkService(BaseService):
             txn_id=txn_id,
             status=RequestStatusEnum.rcvd,
             refs=txn_statuses,
-            callable_on_complete=callback_func.__name__ if callback_func else None,
         )
 
         link_http_request = (
@@ -94,12 +92,9 @@ class MapperLinkService(BaseService):
     async def link_request(
         self,
         mappings: List[MapperValue],
-        callback_func: Callable[[TxnStatus], Coroutine] = None,
         txn_id: str = None,
     ) -> TxnStatus:
-        link_http_request, txn_status = self.get_new_link_request(
-            mappings, callback_func, txn_id
-        )
+        link_http_request, txn_status = self.get_new_link_request(mappings, txn_id)
 
         queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool.get())
         await queue.set(
@@ -110,8 +105,6 @@ class MapperLinkService(BaseService):
 
         if not mappings:
             txn_status.status = RequestStatusEnum.succ
-            if callback_func:
-                asyncio.create_task(callback_func(txn_status))
             return txn_status
 
         async def link_start():
