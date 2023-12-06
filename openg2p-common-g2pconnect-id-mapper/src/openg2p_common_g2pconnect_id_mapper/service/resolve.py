@@ -30,6 +30,154 @@ _config = Settings.get_config(strict=False)
 
 
 class MapperResolveService(BaseService):
+    async def resolve_request(
+        self,
+        mappings: List[MapperValue],
+        txn_id: str = None,
+        wait_for_response: bool = True,
+        loop_sleep=1,
+        max_retries=10,
+    ) -> TxnStatus:
+        resolve_http_request, txn_status = self.get_new_resolve_request(
+            mappings, txn_id
+        )
+
+        queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool.get())
+        await queue.set(
+            f"{_config.queue_resolve_name}{txn_status.txn_id}",
+            orjson.dumps(txn_status.model_dump()).decode(),
+        )
+
+        if not mappings:
+            txn_status.status = RequestStatusEnum.succ
+            return txn_status
+
+        if not wait_for_response:
+            asyncio.create_task(
+                self.start_resolve_process(resolve_http_request, txn_status)
+            )
+            await queue.aclose()
+            return txn_status
+
+        await self.start_resolve_process(resolve_http_request, txn_status)
+
+        retry_count = 0
+        while retry_count < max_retries:
+            res_txn_status = TxnStatus.model_validate(
+                orjson.loads(
+                    await queue.get(f"{_config.queue_resolve_name}{txn_status.txn_id}")
+                )
+            )
+            if res_txn_status.status in (
+                RequestStatusEnum.succ,
+                RequestStatusEnum.rjct,
+            ):
+                await queue.aclose()
+                return res_txn_status
+            retry_count += 1
+            if loop_sleep:
+                await asyncio.sleep(loop_sleep)
+        await queue.aclose()
+        raise BaseAppException("G2P-MAP-101", "Max retries exhausted while resolving.")
+
+    def resolve_request_sync(
+        self,
+        mappings: List[MapperValue],
+        txn_id: str = None,
+        loop_sleep=1,
+        max_retries=10,
+    ) -> TxnStatus:
+        resolve_http_request, txn_status = self.get_new_resolve_request(
+            mappings, callback_func=None, txn_id=txn_id
+        )
+
+        queue = redis.Redis(connection_pool=queue_redis_conn_pool.get())
+        queue.set(
+            f"{_config.queue_resolve_name}{txn_status.txn_id}",
+            orjson.dumps(txn_status.model_dump()).decode(),
+        )
+
+        if not mappings:
+            txn_status.status = RequestStatusEnum.succ
+            queue.close()
+            return txn_status
+
+        self.start_resolve_process(resolve_http_request, txn_status)
+
+        retry_count = 0
+        while retry_count < max_retries:
+            res_txn_status = TxnStatus.model_validate(
+                orjson.loads(
+                    queue.get(f"{_config.queue_resolve_name}{txn_status.txn_id}")
+                )
+            )
+            if res_txn_status.status in (
+                RequestStatusEnum.succ,
+                RequestStatusEnum.rjct.value,
+            ):
+                queue.close()
+                return res_txn_status
+            retry_count += 1
+            if loop_sleep:
+                time.sleep(loop_sleep)
+
+        queue.close()
+        raise BaseAppException("G2P-MAP-101", "Max retries exhausted while resolving.")
+
+    async def start_resolve_process(
+        self, resolve_http_request: ResolveHttpRequest, txn_status: TxnStatus
+    ):
+        try:
+            client = httpx.AsyncClient()
+            res = await client.post(
+                _config.mapper_resolve_url,
+                content=resolve_http_request.model_dump_json(),
+                headers={"content-type": "application/json"},
+                timeout=_config.mapper_api_timeout_secs,
+            )
+            await client.aclose()
+            res.raise_for_status()
+            res = CommonResponseMessage.model_validate(res.json())
+            if res.message.ack_status != Ack.ACK:
+                _logger.error(
+                    "Encountered negative ACK from ID Mapper during resolve request"
+                )
+                txn_status.change_all_status(RequestStatusEnum.rjct)
+            else:
+                txn_status.change_all_status(RequestStatusEnum.pdng)
+        except httpx.ReadTimeout:
+            # TODO: There is a timeout problem with sunbird
+            _logger.exception("Encountered timeout during ID Mapper resolve request")
+        except Exception:
+            _logger.exception("Encountered error during ID Mapper resolve request")
+            txn_status.change_all_status(RequestStatusEnum.rjct)
+
+    def start_resolve_process_sync(
+        self, resolve_http_request: ResolveHttpRequest, txn_status: TxnStatus
+    ):
+        try:
+            res = httpx.post(
+                _config.mapper_resolve_url,
+                content=resolve_http_request.model_dump_json(),
+                headers={"content-type": "application/json"},
+                timeout=_config.mapper_api_timeout_secs,
+            )
+            res.raise_for_status()
+            res = CommonResponseMessage.model_validate(res.json())
+            if res.message.ack_status != Ack.ACK:
+                _logger.error(
+                    "Encountered negative ACK from ID Mapper during resolve request"
+                )
+                txn_status.change_all_status(RequestStatusEnum.rjct)
+            else:
+                txn_status.change_all_status(RequestStatusEnum.pdng)
+        except httpx.ReadTimeout:
+            # TODO: There is a timeout problem with sunbird
+            _logger.exception("Encountered timeout during ID Mapper resolve request")
+        except Exception:
+            _logger.exception("Encountered error during ID Mapper resolve request")
+            txn_status.change_all_status(RequestStatusEnum.rjct)
+
     def get_new_resolve_request(
         self,
         mappings: List[MapperValue],
@@ -95,101 +243,3 @@ class MapperResolveService(BaseService):
         )
 
         return resolve_http_request, txn_status
-
-    async def resolve_request(
-        self,
-        mappings: List[MapperValue],
-        txn_id: str = None,
-    ) -> TxnStatus:
-        resolve_http_request, txn_status = self.get_new_resolve_request(
-            mappings, txn_id
-        )
-
-        queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool.get())
-        await queue.set(
-            f"{_config.queue_resolve_name}{txn_status.txn_id}",
-            orjson.dumps(txn_status.model_dump()).decode(),
-        )
-        await queue.aclose()
-
-        if not mappings:
-            txn_status.status = RequestStatusEnum.succ
-            return txn_status
-
-        async def resolve_start():
-            self.start_resolve_process(resolve_http_request, txn_status)
-
-        asyncio.create_task(resolve_start())
-        return txn_status
-
-    def resolve_request_sync(
-        self,
-        mappings: List[MapperValue],
-        txn_id: str = None,
-        loop_sleep=1,
-        max_retries=10,
-    ) -> TxnStatus:
-        resolve_http_request, txn_status = self.get_new_resolve_request(
-            mappings, callback_func=None, txn_id=txn_id
-        )
-
-        queue = redis.Redis(connection_pool=queue_redis_conn_pool.get())
-        queue.set(
-            f"{_config.queue_resolve_name}{txn_status.txn_id}",
-            orjson.dumps(txn_status.model_dump()).decode(),
-        )
-
-        if not mappings:
-            txn_status.status = RequestStatusEnum.succ
-            queue.close()
-            return txn_status
-
-        self.start_resolve_process(resolve_http_request, txn_status)
-
-        retry_count = 0
-        while retry_count < max_retries:
-            res_txn_status = orjson.loads(
-                queue.get(f"{_config.queue_resolve_name}{txn_status.txn_id}")
-            )["status"]
-            if res_txn_status in (
-                RequestStatusEnum.succ.value,
-                RequestStatusEnum.rjct.value,
-            ):
-                queue.close()
-                return TxnStatus.model_validate(
-                    orjson.loads(
-                        queue.get(f"{_config.queue_resolve_name}{txn_status.txn_id}")
-                    )
-                )
-            retry_count += 1
-            if loop_sleep:
-                time.sleep(loop_sleep)
-
-        queue.close()
-        raise BaseAppException("G2P-MAP-101", "Max retries exhausted while resolving.")
-
-    def start_resolve_process(
-        self, resolve_http_request: ResolveHttpRequest, txn_status: TxnStatus
-    ):
-        try:
-            res = httpx.post(
-                _config.mapper_resolve_url,
-                content=resolve_http_request.model_dump_json(),
-                headers={"content-type": "application/json"},
-                timeout=_config.mapper_api_timeout_secs,
-            )
-            res.raise_for_status()
-            res = CommonResponseMessage.model_validate(res.json())
-            if res.message.ack_status != Ack.ACK:
-                _logger.error(
-                    "Encountered negative ACK from ID Mapper during resolve request"
-                )
-                txn_status.change_all_status(RequestStatusEnum.rjct)
-            else:
-                txn_status.change_all_status(RequestStatusEnum.pdng)
-        except httpx.ReadTimeout:
-            # TODO: There is a timeout problem with sunbird
-            _logger.exception("Encountered timeout during ID Mapper resolve request")
-        except Exception:
-            _logger.exception("Encountered error during ID Mapper resolve request")
-            txn_status.change_all_status(RequestStatusEnum.rjct)

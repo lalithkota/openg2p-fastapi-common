@@ -40,9 +40,9 @@ class ResolveCallbackController(BaseController):
 
     async def mapper_on_resolve(self, resolve_http_request: ResolveCallbackHttpRequest):
         txn_id = resolve_http_request.message.transaction_id
-        queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool)
+        queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool.get())
 
-        if not not await queue.exists(f"{_config.queue_resolve_name}{txn_id}"):
+        if not await queue.exists(f"{_config.queue_resolve_name}{txn_id}"):
             _logger.error("On resolve. Invalid Txn id received.")
             return CommonResponseMessage(
                 message=CommonResponse(

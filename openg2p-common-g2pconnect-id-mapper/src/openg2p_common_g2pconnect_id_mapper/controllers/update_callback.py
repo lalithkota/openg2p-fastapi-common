@@ -41,7 +41,7 @@ class UpdateCallbackController(BaseController):
 
     async def mapper_on_update(self, update_http_request: UpdateCallbackHttpRequest):
         txn_id = update_http_request.message.transaction_id
-        queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool)
+        queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool.get())
 
         if not await queue.exists(f"{_config.queue_update_name}{txn_id}"):
             _logger.error("On Update. Invalid Txn id received.")
@@ -89,7 +89,7 @@ class UpdateCallbackController(BaseController):
                 pass
 
         await queue.set(
-            f"{_config.queue_link_name}{txn_id}",
+            f"{_config.queue_update_name}{txn_id}",
             orjson.dumps(txn_status.model_dump()).decode(),
         )
         await queue.aclose()

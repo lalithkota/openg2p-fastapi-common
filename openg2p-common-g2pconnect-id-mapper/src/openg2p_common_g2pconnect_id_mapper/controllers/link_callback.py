@@ -40,7 +40,7 @@ class LinkCallbackController(BaseController):
 
     async def mapper_on_link(self, link_http_request: LinkCallbackHttpRequest):
         txn_id = link_http_request.message.transaction_id
-        queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool)
+        queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool.get())
 
         if not await queue.exists(f"{_config.queue_link_name}{txn_id}"):
             _logger.error("On Link. Invalid Txn id received.")

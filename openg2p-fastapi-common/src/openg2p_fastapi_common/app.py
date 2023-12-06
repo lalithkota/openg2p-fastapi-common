@@ -108,6 +108,7 @@ class Initializer(BaseComponent):
         app = app_registry.get()
         with open(args.filepath, "wb+") as f:
             f.write(orjson.dumps(app.openapi(), option=orjson.OPT_INDENT_2))
+            f.write(b"\n")
 
     async def fastapi_app_startup(self, app: FastAPI):
         # Overload this method to execute something on startup

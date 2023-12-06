@@ -40,7 +40,7 @@ class Settings(Settings):
         if self.queue_redis_username:
             source += f"{self.queue_redis_username}:{self.queue_redis_password}@"
         if self.queue_redis_host:
-            source += f"{self.queue_redis_host}:{self.db_port}"
+            source += f"{self.queue_redis_host}:{self.queue_redis_port}"
         if self.queue_redis_dbindex:
             source += f"/{self.queue_redis_dbindex}"
 
