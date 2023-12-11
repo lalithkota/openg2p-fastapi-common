@@ -88,7 +88,7 @@ class MapperResolveService(BaseService):
         max_retries=10,
     ) -> TxnStatus:
         resolve_http_request, txn_status = self.get_new_resolve_request(
-            mappings, callback_func=None, txn_id=txn_id
+            mappings, txn_id
         )
 
         queue = redis.Redis(connection_pool=queue_redis_conn_pool.get())
