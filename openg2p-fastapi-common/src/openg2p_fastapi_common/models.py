@@ -27,20 +27,22 @@ class BaseORMModelWithId(BaseORMModel):
     active: Mapped[bool] = mapped_column()
 
     @classmethod
-    async def get_by_id(cls, id: int) -> "BaseORMModelWithId":
+    async def get_by_id(cls, id: int, active=True) -> "BaseORMModelWithId":
         result = None
         async_session_maker = async_sessionmaker(dbengine.get())
         async with async_session_maker() as session:
             result = await session.get(cls, id)
+            if result.active != active:
+                result = None
 
         return result
 
     @classmethod
-    async def get_all(cls) -> List["BaseORMModelWithId"]:
+    async def get_all(cls, active=True) -> List["BaseORMModelWithId"]:
         response = []
         async_session_maker = async_sessionmaker(dbengine.get())
         async with async_session_maker() as session:
-            stmt = select(cls).order_by(cls.id.asc())
+            stmt = select(cls).where(cls.active == active).order_by(cls.id.asc())
 
             result = await session.execute(stmt)
 
