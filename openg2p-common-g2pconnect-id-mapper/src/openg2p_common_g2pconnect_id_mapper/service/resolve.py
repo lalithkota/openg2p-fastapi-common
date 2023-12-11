@@ -102,7 +102,7 @@ class MapperResolveService(BaseService):
             queue.close()
             return txn_status
 
-        self.start_resolve_process(resolve_http_request, txn_status)
+        self.start_resolve_process_sync(resolve_http_request, txn_status)
 
         retry_count = 0
         while retry_count < max_retries:

@@ -100,7 +100,7 @@ class MapperUpdateService(BaseService):
             queue.close()
             return txn_status
 
-        self.start_update_process(update_http_request, txn_status)
+        self.start_update_process_sync(update_http_request, txn_status)
 
         retry_count = 0
         while retry_count < max_retries:
