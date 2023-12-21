@@ -33,6 +33,12 @@ class OAuthController(BaseController):
         )
 
     async def oauth_callback(self, request: Request):
+        """
+        Oauth2 Redirect Url. Auth Server will redirect to this URL after the Authentication is successful.
+
+        Internal Errors:
+        - Code: G2P-AUT-401. HTTP: 401. Message: Login Provider Id not received.
+        """
         query_params = request.query_params
         state = orjson.loads(query_params.get("state", "{}"))
         login_provider_id = state.get("p", None)

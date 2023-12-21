@@ -40,6 +40,11 @@ class UpdateCallbackController(BaseController):
         )
 
     async def mapper_on_update(self, update_http_request: UpdateCallbackHttpRequest):
+        """
+        The API that ID Mapper calls back when a ID Mapper Update Request is made.
+        - Returns positive ACK (acc to G2P Connect Spec) if the txn_id is known.
+          Return negative ACK otherwise.
+        """
         txn_id = update_http_request.message.transaction_id
         queue = redis_asyncio.Redis(connection_pool=queue_redis_async_pool.get())
 
