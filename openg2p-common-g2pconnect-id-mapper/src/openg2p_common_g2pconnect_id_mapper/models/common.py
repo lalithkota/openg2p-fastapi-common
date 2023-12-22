@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Callable, Coroutine, Dict, Optional, Union
+from typing import Dict, Optional, Union
 
 from openg2p_fastapi_common.errors import ErrorResponse
 from pydantic import BaseModel
@@ -60,7 +60,6 @@ class TxnStatus(BaseModel):
     txn_id: str
     status: RequestStatusEnum
     refs: Dict[str, SingleTxnRefStatus]
-    callable_on_complete: Optional[Callable[["TxnStatus"], Coroutine]] = None
 
     def change_all_status(self, status: RequestStatusEnum):
         self.status = status

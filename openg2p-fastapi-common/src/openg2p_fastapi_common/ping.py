@@ -21,6 +21,10 @@ class PingController(BaseController):
         )
 
     async def get_ping(self):
+        """
+        Returns "pong" always, if the service is healthy.
+        This can also used for service health checks.
+        """
         return "pong"
 
 

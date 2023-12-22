@@ -57,6 +57,13 @@ class AuthController(BaseController):
         auth: Annotated[AuthCredentials, Depends(JwtBearerAuth())],
         online: bool = True,
     ):
+        """
+        Get Profile Data of the authenticated user/entity.
+        This can also be used to check whether or not the Authentication is present and valid.
+        - Authentication required.
+        - If online is true, the server will try to userinfo from original Authorization Server.
+          Else it will return the information present in ID Token and Access token.
+        """
         provider = await LoginProvider.get_login_provider_from_iss(auth.iss)
         if provider.type == LoginProviderTypes.oauth2_auth_code:
             if online:
@@ -71,10 +78,18 @@ class AuthController(BaseController):
             raise NotImplementedError()
 
     async def logout(self, response: Response):
+        """
+        Perform Logout. This clears the Access Tokens and ID Tokens from cookies.
+        - Authentication not mandatory.
+        """
         response.delete_cookie("X-Access-Token")
         response.delete_cookie("X-ID-Token")
 
     async def get_login_providers(self):
+        """
+        Get available Login Providers List. Can also be used to display login providers on UI.
+        Use getLoginProviderRedirect API to redirect to this Login Provider to perform login.
+        """
         login_providers: List[LoginProvider] = await LoginProvider.get_all()
         return LoginProviderHttpResponse(
             loginProviders=[
@@ -90,6 +105,10 @@ class AuthController(BaseController):
         )
 
     async def get_login_provider_redirect(self, id: int, redirect_uri: str = "/"):
+        """
+        Redirect URL to redirect to the Login Provider's Authorization URL
+        based on the id of login provider given.
+        """
         login_provider = None
         try:
             login_provider = await LoginProvider.get_by_id(id)
@@ -150,6 +169,7 @@ class AuthController(BaseController):
             )
         if not provider:
             provider = await LoginProvider.get_login_provider_from_iss(iss)
+        # TODO: Check if provider is None
         auth_params = OauthProviderParameters.model_validate(
             provider.authorization_parameters
         )
