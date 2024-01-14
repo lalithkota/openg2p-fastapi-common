@@ -1,10 +1,9 @@
-from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel
 
-from .common import AdditionalInfo, RequestStatusEnum
+from .common import RequestStatusEnum, SingleCommonRequest
 from .message import MsgCallbackHeader, MsgHeader
 
 
@@ -15,17 +14,11 @@ class UpdateRequestStatusReasonCode(Enum):
     rjct_beneficiary_name_invalid = "rjct.beneficiary_name.invalid"
 
 
-class SingleUpdateRequest(BaseModel):
-    reference_id: str
-    timestamp: datetime
+class SingleUpdateRequest(SingleCommonRequest):
     id: str
     fa: str
     name: Optional[str] = None
     phone_number: Optional[str] = None
-    # TODO: Not compatible with G2P Connect
-    # additional_info: Optional[List[AdditionalInfo]] = []
-    additional_info: Optional[AdditionalInfo] = None
-    locale: str = "eng"
 
 
 class UpdateRequest(BaseModel):
@@ -39,17 +32,11 @@ class UpdateHttpRequest(BaseModel):
     message: UpdateRequest
 
 
-class SingleUpdateCallbackRequest(BaseModel):
-    reference_id: str
-    timestamp: datetime
+class SingleUpdateCallbackRequest(SingleCommonRequest):
     id: Optional[str] = ""
     status: RequestStatusEnum
     status_reason_code: Optional[UpdateRequestStatusReasonCode] = None
     status_reason_message: Optional[str] = ""
-    # TODO: Not compatible with G2P Connect
-    # additional_info: Optional[List[AdditionalInfo]] = []
-    additional_info: Optional[AdditionalInfo] = None
-    locale: str = "eng"
 
 
 class UpdateCallbackRequest(BaseModel):

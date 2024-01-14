@@ -20,7 +20,7 @@ from ..models.resolve import ResolveCallbackHttpRequest
 from ..service.resolve import MapperResolveService
 
 _config = Settings.get_config(strict=False)
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger(_config.logging_default_logger_name)
 
 
 class ResolveCallbackController(BaseController):

@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 from .common import RequestStatusEnum
 
@@ -27,10 +27,10 @@ class MsgHeader(BaseModel):
     sender_uri: Optional[str] = ""
     receiver_id: Optional[str] = ""
     total_count: int
-    # TODO: Not compatible with G2P Connect
-    # is_msg_encrypted: bool = False
-    # meta: dict = {}
-    is_encrypted: bool = False
+    is_msg_encrypted: bool = Field(
+        validation_alias=AliasChoices("is_msg_encrypted", "is_encrypted"), default=False
+    )
+    meta: dict = {}
 
 
 class MsgCallbackHeader(BaseModel):
@@ -47,7 +47,5 @@ class MsgCallbackHeader(BaseModel):
     completed_count: Optional[int] = -1
     sender_id: Optional[str] = None
     receiver_id: Optional[str] = None
-    # TODO: Not compatible with G2P Connect
-    # is_msg_encrypted: bool
-    # meta: dict = {}
-    is_encrypted: bool
+    is_msg_encrypted: bool = Field(validation_alias="is_encrypted", default=False)
+    meta: dict = {}

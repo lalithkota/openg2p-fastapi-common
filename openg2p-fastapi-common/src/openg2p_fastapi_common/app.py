@@ -16,7 +16,7 @@ from .context import app_registry, component_registry, dbengine
 from .exception import BaseExceptionHandler
 
 _config = Settings.get_config(strict=False)
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger(_config.logging_default_logger_name)
 
 
 class Initializer(BaseComponent):
@@ -37,13 +37,12 @@ class Initializer(BaseComponent):
     def init_logger(self):
         json_logging.init_fastapi(enable_json=True)
         json_logging.JSON_SERIALIZER = lambda log: orjson.dumps(log).decode("utf-8")
-        logger = logging.getLogger(__name__)
-        logger.setLevel(getattr(logging, _config.logging_level))
-        logger.addHandler(logging.StreamHandler(sys.stdout))
+        _logger.setLevel(getattr(logging, _config.logging_level))
+        _logger.addHandler(logging.StreamHandler(sys.stdout))
         if _config.logging_file_name:
             file_handler = logging.FileHandler(_config.logging_file_name)
-            logger.addHandler(file_handler)
-        return logger
+            _logger.addHandler(file_handler)
+        return _logger
 
     def init_db(self):
         if _config.db_datasource:

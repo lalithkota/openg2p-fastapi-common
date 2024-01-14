@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
+    logging_default_logger_name: str = "app"
     logging_level: str = "INFO"
     logging_file_name: Optional[Path] = None
 

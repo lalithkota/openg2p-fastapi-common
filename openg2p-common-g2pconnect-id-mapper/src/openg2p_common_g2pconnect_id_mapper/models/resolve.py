@@ -1,10 +1,13 @@
-from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel
 
-from .common import AccountProviderInfo, AdditionalInfo, RequestStatusEnum
+from .common import (
+    AccountProviderInfo,
+    RequestStatusEnum,
+    SingleCommonRequest,
+)
 from .message import MsgCallbackHeader, MsgHeader
 
 
@@ -29,17 +32,11 @@ class ResolveRequestStatusReasonCode(Enum):
     succ_id_not_found = "succ.id.not_found"
 
 
-class SingleResolveRequest(BaseModel):
-    reference_id: str
-    timestamp: datetime
+class SingleResolveRequest(SingleCommonRequest):
     fa: Optional[str] = ""
     id: Optional[str] = ""
     name: Optional[str] = None
     scope: Optional[ResolveScope] = ResolveScope.details
-    # TODO: Not compatible with G2P Connect
-    # additional_info: Optional[List[AdditionalInfo]] = []
-    additional_info: Optional[AdditionalInfo] = None
-    locale: str = "eng"
 
 
 class ResolveRequest(BaseModel):
@@ -53,19 +50,13 @@ class ResolveHttpRequest(BaseModel):
     message: ResolveRequest
 
 
-class SingleResolveCallbackRequest(BaseModel):
-    reference_id: str
-    timestamp: datetime
+class SingleResolveCallbackRequest(SingleCommonRequest):
     fa: Optional[str] = ""
     id: Optional[str] = ""
     account_provider_info: Optional[AccountProviderInfo] = None
     status: RequestStatusEnum
     status_reason_code: Optional[ResolveRequestStatusReasonCode] = None
     status_reason_message: Optional[str] = ""
-    # TODO: Not compatible with G2P Connect
-    # additional_info: Optional[List[AdditionalInfo]] = []
-    additional_info: Optional[AdditionalInfo] = None
-    locale: str = "eng"
 
 
 class ResolveCallbackRequest(BaseModel):
