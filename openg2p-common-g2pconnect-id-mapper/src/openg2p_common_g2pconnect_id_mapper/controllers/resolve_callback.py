@@ -68,19 +68,23 @@ class ResolveCallbackController(BaseController):
 
         for txn in resolve_http_request.message.resolve_response:
             txn_status.refs[txn.reference_id].status = txn.status
+            _logger.debug(
+                "On Resolve. Received callback, status: %s, code: %s, message: %s",
+                txn.status,
+                txn.status_reason_code,
+                txn.status_reason_message,
+            )
             if txn.status_reason_code:
-                _logger.error(
-                    "On Resolve. Error Received on callback, code: %s, message: %s",
-                    txn.status_reason_code,
-                    txn.status_reason_message,
-                )
-                continue
+                txn_status.refs[
+                    txn.reference_id
+                ].status_reason_code = txn.status_reason_code.value
             if txn.fa:
                 txn_status.refs[txn.reference_id].fa = txn.fa
             if txn.id:
                 txn_status.refs[txn.reference_id].id = txn.id
 
         if (not txn_status.status) or (txn_status.status == RequestStatusEnum.rcvd):
+            # Computing txn_status if it is not returned properly.
             success_count = 0
             pending_count = 0
             for ref in txn_status.refs.values():

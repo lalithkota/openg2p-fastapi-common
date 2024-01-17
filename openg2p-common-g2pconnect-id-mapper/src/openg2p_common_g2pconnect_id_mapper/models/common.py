@@ -54,6 +54,7 @@ class MapperValue(BaseModel):
 class SingleTxnRefStatus(MapperValue):
     reference_id: str
     status: RequestStatusEnum
+    status_reason_code: Optional[str] = None
 
 
 class TxnStatus(BaseModel):
@@ -78,6 +79,6 @@ class SingleCommonRequest(BaseModel):
     def convert_addl_info_dict_list(
         cls, v: Optional[Union[List[AdditionalInfo], AdditionalInfo]]
     ):
-        if not isinstance(v, list):
+        if v and not isinstance(v, list):
             v = [v]
         return v

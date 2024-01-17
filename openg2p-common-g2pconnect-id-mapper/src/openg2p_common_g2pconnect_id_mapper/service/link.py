@@ -84,9 +84,7 @@ class MapperLinkService(BaseService):
         loop_sleep=1,
         max_retries=10,
     ) -> TxnStatus:
-        link_http_request, txn_status = self.get_new_link_request(
-            mappings, callback_func=None, txn_id=txn_id
-        )
+        link_http_request, txn_status = self.get_new_link_request(mappings, txn_id)
 
         queue = redis.Redis(connection_pool=queue_redis_conn_pool.get())
         queue.set(

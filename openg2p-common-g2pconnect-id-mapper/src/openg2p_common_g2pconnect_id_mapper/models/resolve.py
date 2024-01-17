@@ -51,8 +51,8 @@ class ResolveHttpRequest(BaseModel):
 
 
 class SingleResolveCallbackRequest(SingleCommonRequest):
-    fa: Optional[str] = ""
-    id: Optional[str] = ""
+    fa: Optional[str] = None
+    id: Optional[str] = None
     account_provider_info: Optional[AccountProviderInfo] = None
     status: RequestStatusEnum
     status_reason_code: Optional[ResolveRequestStatusReasonCode] = None

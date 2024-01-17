@@ -113,7 +113,7 @@ class MapperResolveService(BaseService):
             )
             if res_txn_status.status in (
                 RequestStatusEnum.succ,
-                RequestStatusEnum.rjct.value,
+                RequestStatusEnum.rjct,
             ):
                 queue.close()
                 return res_txn_status

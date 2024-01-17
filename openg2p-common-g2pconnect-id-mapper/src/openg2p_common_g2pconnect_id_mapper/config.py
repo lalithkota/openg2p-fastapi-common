@@ -11,9 +11,9 @@ class Settings(Settings):
     )
     callback_api_common_prefix: str = "/callback"
 
-    mapper_resolve_url: str = "http://localhost:8766/v0.1.0/mapper/resolve"
-    mapper_link_url: str = "http://localhost:8766/v0.1.0/mapper/link"
-    mapper_update_url: str = "http://localhost:8766/v0.1.0/mapper/update"
+    mapper_resolve_url: str = "http://localhost:8007/mapper/resolve"
+    mapper_link_url: str = "http://localhost:8007/mapper/link"
+    mapper_update_url: str = "http://localhost:8007/mapper/update"
     mapper_api_timeout_secs: int = 10
 
     mapper_common_sender_id: str = "dev.openg2p.net"
