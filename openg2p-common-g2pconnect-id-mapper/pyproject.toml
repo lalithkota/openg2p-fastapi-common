@@ -4,7 +4,6 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openg2p-common-g2pconnect-id-mapper"
-version = "0.1.0"
 authors = [
     { name="OpenG2P", email="info@openg2p.org" },
 ]
@@ -16,11 +15,15 @@ classifiers = [
     "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
     "Operating System :: OS Independent",
 ]
-dependencies=[
+dependencies = [
     "openg2p-fastapi-common",
 ]
+dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://openg2p.org"
 Documentation = "https://docs.openg2p.org/"
 Repository = "https://github.com/openg2p/openg2p-fastapi-common"
+
+[tool.hatch.version]
+path = "src/openg2p_common_g2pconnect_id_mapper/__init__.py"

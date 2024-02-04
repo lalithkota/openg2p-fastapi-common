@@ -20,7 +20,7 @@ from ..models.link import LinkCallbackHttpRequest
 from ..service.link import MapperLinkService
 
 _config = Settings.get_config(strict=False)
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger(_config.logging_default_logger_name)
 
 
 class LinkCallbackController(BaseController):
@@ -68,17 +68,21 @@ class LinkCallbackController(BaseController):
 
         for txn in link_http_request.message.link_response:
             txn_status.refs[txn.reference_id].status = txn.status
+            _logger.debug(
+                "On Link. Received callback, status: %s, code: %s, message: %s",
+                txn.status,
+                txn.status_reason_code,
+                txn.status_reason_message,
+            )
             if txn.status_reason_code:
-                _logger.error(
-                    "On Link. Error Received on callback, code: %s, message: %s",
-                    txn.status_reason_code,
-                    txn.status_reason_message,
-                )
-                continue
+                txn_status.refs[
+                    txn.reference_id
+                ].status_reason_code = txn.status_reason_code.value
             if txn.fa:
                 txn_status.refs[txn.reference_id].fa = txn.fa
 
         if (not txn_status.status) or (txn_status.status == RequestStatusEnum.rcvd):
+            # Computing txn_status if it is not returned properly.
             success_count = 0
             pending_count = 0
             for ref in txn_status.refs.values():

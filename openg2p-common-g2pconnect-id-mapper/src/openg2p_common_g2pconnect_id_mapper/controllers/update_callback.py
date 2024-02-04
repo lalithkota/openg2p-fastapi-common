@@ -20,7 +20,7 @@ from ..models.update import UpdateCallbackHttpRequest
 from ..service.update import MapperUpdateService
 
 _config = Settings.get_config(strict=False)
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger(_config.logging_default_logger_name)
 
 
 class UpdateCallbackController(BaseController):
@@ -69,15 +69,19 @@ class UpdateCallbackController(BaseController):
 
         for txn in update_http_request.message.update_response:
             txn_status.refs[txn.reference_id].status = txn.status
+            _logger.debug(
+                "On Update. Received callback, status: %s, code: %s, message: %s",
+                txn.status,
+                txn.status_reason_code,
+                txn.status_reason_message,
+            )
             if txn.status_reason_code:
-                _logger.error(
-                    "On Update. Error Received on callback, code: %s, message: %s",
-                    txn.status_reason_code,
-                    txn.status_reason_message,
-                )
-                continue
+                txn_status.refs[
+                    txn.reference_id
+                ].status_reason_code = txn.status_reason_code.value
 
         if (not txn_status.status) or (txn_status.status == RequestStatusEnum.rcvd):
+            # Computing txn_status if it is not returned properly.
             success_count = 0
             pending_count = 0
             for ref in txn_status.refs.values():

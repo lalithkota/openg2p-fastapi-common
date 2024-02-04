@@ -1,9 +1,9 @@
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from openg2p_fastapi_common.errors import ErrorResponse
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 
 
 class Ack(Enum):
@@ -20,7 +20,7 @@ class AccountProviderInfo(BaseModel):
 
 
 class AdditionalInfo(BaseModel):
-    key: str
+    name: str = Field(validation_alias=AliasChoices("name", "key"))
     value: Union[int, float, str, bool, dict]
 
 
@@ -54,6 +54,7 @@ class MapperValue(BaseModel):
 class SingleTxnRefStatus(MapperValue):
     reference_id: str
     status: RequestStatusEnum
+    status_reason_code: Optional[str] = None
 
 
 class TxnStatus(BaseModel):
@@ -65,3 +66,19 @@ class TxnStatus(BaseModel):
         self.status = status
         for ref in self.refs:
             self.refs[ref].status = status
+
+
+class SingleCommonRequest(BaseModel):
+    reference_id: str
+    timestamp: datetime
+    additional_info: Optional[Union[List[AdditionalInfo], AdditionalInfo]] = None
+    locale: str = "eng"
+
+    @field_validator("additional_info")
+    @classmethod
+    def convert_addl_info_dict_list(
+        cls, v: Optional[Union[List[AdditionalInfo], AdditionalInfo]]
+    ):
+        if v and not isinstance(v, list):
+            v = [v]
+        return v

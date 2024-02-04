@@ -1,10 +1,9 @@
-from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel
 
-from .common import AdditionalInfo, RequestStatusEnum
+from .common import RequestStatusEnum, SingleCommonRequest
 from .message import MsgCallbackHeader, MsgHeader
 
 
@@ -20,17 +19,11 @@ class LinkRequestStatusReasonCode(Enum):
     rjct_other_error = "rjct.other.error"
 
 
-class SingleLinkRequest(BaseModel):
-    reference_id: str
-    timestamp: datetime
+class SingleLinkRequest(SingleCommonRequest):
     id: str
     fa: str
     name: Optional[str] = None
     phone_number: Optional[str] = None
-    # TODO: Not compatible with G2P Connect
-    # additional_info: Optional[List[AdditionalInfo]] = []
-    additional_info: Optional[AdditionalInfo] = None
-    locale: str = "eng"
 
 
 class LinkRequest(BaseModel):
@@ -44,17 +37,11 @@ class LinkHttpRequest(BaseModel):
     message: LinkRequest
 
 
-class SingleLinkCallbackRequest(BaseModel):
-    reference_id: str
-    timestamp: datetime
+class SingleLinkCallbackRequest(SingleCommonRequest):
     fa: str
     status: RequestStatusEnum
     status_reason_code: Optional[LinkRequestStatusReasonCode] = None
     status_reason_message: Optional[str] = ""
-    # TODO: Not compatible with G2P Connect
-    # additional_info: Optional[List[AdditionalInfo]] = []
-    additional_info: Optional[AdditionalInfo] = None
-    locale: str = "eng"
 
 
 class LinkCallbackRequest(BaseModel):

@@ -25,8 +25,8 @@ from ..models.common import (
 from ..models.link import LinkHttpRequest, LinkRequest, SingleLinkRequest
 from ..models.message import MsgHeader
 
-_logger = logging.getLogger(__name__)
 _config = Settings.get_config(strict=False)
+_logger = logging.getLogger(_config.logging_default_logger_name)
 
 
 class MapperLinkService(BaseService):
@@ -84,9 +84,7 @@ class MapperLinkService(BaseService):
         loop_sleep=1,
         max_retries=10,
     ) -> TxnStatus:
-        link_http_request, txn_status = self.get_new_link_request(
-            mappings, callback_func=None, txn_id=txn_id
-        )
+        link_http_request, txn_status = self.get_new_link_request(mappings, txn_id)
 
         queue = redis.Redis(connection_pool=queue_redis_conn_pool.get())
         queue.set(

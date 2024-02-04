@@ -25,8 +25,8 @@ from ..models.common import (
 from ..models.message import MsgHeader
 from ..models.update import SingleUpdateRequest, UpdateHttpRequest, UpdateRequest
 
-_logger = logging.getLogger(__name__)
 _config = Settings.get_config(strict=False)
+_logger = logging.getLogger(_config.logging_default_logger_name)
 
 
 class MapperUpdateService(BaseService):

@@ -5,6 +5,7 @@ from fastapi.responses import ORJSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .component import BaseComponent
+from .config import Settings
 from .context import app_registry
 from .errors import BaseAppException, ErrorListResponse, ErrorResponse
 from .errors.http_exceptions import (
@@ -16,7 +17,8 @@ from .errors.http_exceptions import (
     UnauthorizedError,
 )
 
-_logger = logging.getLogger(__name__)
+_config = Settings.get_config()
+_logger = logging.getLogger(_config.logging_default_logger_name)
 
 
 class BaseExceptionHandler(BaseComponent):

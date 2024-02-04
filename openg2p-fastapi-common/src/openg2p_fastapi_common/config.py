@@ -5,6 +5,7 @@ from typing import Optional
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from . import __version__
 from .context import config_registry
 
 
@@ -16,6 +17,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
+    logging_default_logger_name: str = "app"
     logging_level: str = "INFO"
     logging_file_name: Optional[Path] = None
 
@@ -27,7 +29,7 @@ class Settings(BaseSettings):
     Further details goes here
     ***********************************
     """
-    openapi_version: str = "1.0.0"
+    openapi_version: str = __version__
     openapi_contact_url: str = "https://www.openg2p.org/"
     openapi_contact_email: str = "info@openg2p.org"
     openapi_license_name: str = "Mozilla Public License 2.0"

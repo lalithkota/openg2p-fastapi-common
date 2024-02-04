@@ -25,8 +25,8 @@ from ..models.common import (
 from ..models.message import MsgHeader
 from ..models.resolve import ResolveHttpRequest, ResolveRequest, SingleResolveRequest
 
-_logger = logging.getLogger(__name__)
 _config = Settings.get_config(strict=False)
+_logger = logging.getLogger(_config.logging_default_logger_name)
 
 
 class MapperResolveService(BaseService):
@@ -113,7 +113,7 @@ class MapperResolveService(BaseService):
             )
             if res_txn_status.status in (
                 RequestStatusEnum.succ,
-                RequestStatusEnum.rjct.value,
+                RequestStatusEnum.rjct,
             ):
                 queue.close()
                 return res_txn_status
