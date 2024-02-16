@@ -22,7 +22,7 @@ class OauthProviderParameters(BaseModel):
     client_assertion_type: OauthClientAssertionType = (
         OauthClientAssertionType.client_secret
     )
-    client_assertion_jwk: Optional[Union[Dict, str]] = None
+    client_assertion_jwk: Optional[Union[Dict, str, bytes]] = None
     client_assertion_jwt_aud: Optional[str] = None
 
     response_type: str = "code"
