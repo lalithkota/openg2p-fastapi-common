@@ -64,7 +64,7 @@ class AuthController(BaseController):
         - If online is true, the server will try to userinfo from original Authorization Server.
           Else it will return the information present in ID Token and Access token.
         """
-        provider = await LoginProvider.get_login_provider_from_iss(auth.iss)
+        provider = await self.get_login_provider_db_by_iss(auth.iss)
         if provider.type == LoginProviderTypes.oauth2_auth_code:
             if online:
                 return BasicProfile.model_validate(
@@ -90,7 +90,7 @@ class AuthController(BaseController):
         Get available Login Providers List. Can also be used to display login providers on UI.
         Use getLoginProviderRedirect API to redirect to this Login Provider to perform login.
         """
-        login_providers: List[LoginProvider] = await LoginProvider.get_all()
+        login_providers = await self.get_login_providers_db()
         return LoginProviderHttpResponse(
             loginProviders=[
                 LoginProviderResponse(
@@ -111,7 +111,7 @@ class AuthController(BaseController):
         """
         login_provider = None
         try:
-            login_provider = await LoginProvider.get_by_id(id)
+            login_provider = await self.get_login_provider_db_by_id(id)
         except Exception:
             _logger.exception("Login Provider fetching: Invalid Id")
             return None
@@ -143,6 +143,15 @@ class AuthController(BaseController):
         else:
             raise NotImplementedError()
 
+    async def get_login_providers_db(self) -> List[LoginProvider]:
+        return await LoginProvider.get_all()
+
+    async def get_login_provider_db_by_id(self, id: int) -> LoginProvider:
+        return await LoginProvider.get_by_id(id)
+
+    async def get_login_provider_db_by_iss(self, iss: str) -> LoginProvider:
+        return await LoginProvider.get_login_provider_from_iss(iss)
+
     async def get_oauth_validation_data(
         self,
         auth: Union[str, AuthCredentials],
@@ -168,7 +177,7 @@ class AuthController(BaseController):
                 else auth.iss
             )
         if not provider:
-            provider = await LoginProvider.get_login_provider_from_iss(iss)
+            provider = await self.get_login_provider_db_by_iss(iss)
         # TODO: Check if provider is None
         auth_params = OauthProviderParameters.model_validate(
             provider.authorization_parameters
