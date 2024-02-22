@@ -30,6 +30,8 @@ class LoginProvider(BaseORMModelWithTimes):
 
     @classmethod
     async def get_login_provider_from_iss(cls, iss: str) -> "LoginProvider":
+        # TODO: Modify the following to a direct database query
+        # rather than getting all
         providers: List[LoginProvider] = await cls.get_all()
         for lp in providers:
             if lp.type == LoginProviderTypes.oauth2_auth_code:

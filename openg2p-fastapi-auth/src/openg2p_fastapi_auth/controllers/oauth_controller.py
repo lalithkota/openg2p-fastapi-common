@@ -10,11 +10,12 @@ from openg2p_fastapi_common.controller import BaseController
 from openg2p_fastapi_common.errors.http_exceptions import UnauthorizedError
 
 from ..config import Settings
-from ..models.orm.login_provider import LoginProvider, LoginProviderTypes
+from ..models.orm.login_provider import LoginProviderTypes
 from ..models.provider_auth_parameters import (
     OauthClientAssertionType,
     OauthProviderParameters,
 )
+from .auth_controller import AuthController
 
 _config = Settings.get_config(strict=False)
 _logger = logging.getLogger(_config.logging_default_logger_name)
@@ -32,6 +33,14 @@ class OAuthController(BaseController):
             methods=["GET"],
         )
 
+        self._auth_controller = AuthController.get_component()
+
+    @property
+    def auth_controller(self):
+        if not self._auth_controller:
+            self._auth_controller = AuthController.get_component()
+        return self._auth_controller
+
     async def oauth_callback(self, request: Request):
         """
         Oauth2 Redirect Url. Auth Server will redirect to this URL after the Authentication is successful.
@@ -45,7 +54,9 @@ class OAuthController(BaseController):
         if not login_provider_id:
             raise UnauthorizedError("G2P-AUT-401", "Login Provider Id not received")
 
-        login_provider = await LoginProvider.get_by_id(login_provider_id)
+        login_provider = await self.auth_controller.get_login_provider_db_by_id(
+            login_provider_id
+        )
 
         if login_provider.type == LoginProviderTypes.oauth2_auth_code:
             auth_parameters = OauthProviderParameters.model_validate(
