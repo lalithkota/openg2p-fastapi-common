@@ -53,16 +53,7 @@ class JwtBearerAuth(HTTPBearer):
             raise UnauthorizedError()
 
         try:
-            unverified_payload = jwt.decode(
-                jwt_token,
-                None,
-                options={
-                    "verify_signature": False,
-                    "verify_aud": False,
-                    "verify_iss": False,
-                    "verify_sub": False,
-                },
-            )
+            unverified_payload = jwt.get_unverified_claims(jwt_token)
         except Exception as e:
             raise UnauthorizedError(
                 message=f"Unauthorized. Jwt expired. {repr(e)}"
@@ -141,8 +132,8 @@ class JwtBearerAuth(HTTPBearer):
                     message=f"Unauthorized. Invalid Jwt ID Token. {repr(e)}"
                 ) from e
 
-        claim_to_check = config_dict.get("claim_name", None)
-        claim_values = config_dict.get("claim_values", None)
+        claim_to_check = api_auth_settings.get("claim_name", None)
+        claim_values = api_auth_settings.get("claim_values", None)
         if claim_to_check:
             claims = unverified_payload.get(claim_to_check, None)
             if not claims:
@@ -175,19 +166,7 @@ class JwtBearerAuth(HTTPBearer):
     def combine_tokens(cls, *tokens) -> dict:
         return cls.combine_token_dicts(
             *[
-                jwt.decode(
-                    token,
-                    None,
-                    options={
-                        "verify_signature": False,
-                        "verify_aud": False,
-                        "verify_iss": False,
-                        "verify_sub": False,
-                        "verify_at_hash": False,
-                    },
-                )
-                if isinstance(token, str)
-                else token
+                jwt.get_unverified_claims(token) if isinstance(token, str) else token
                 for token in tokens
                 if token
             ]

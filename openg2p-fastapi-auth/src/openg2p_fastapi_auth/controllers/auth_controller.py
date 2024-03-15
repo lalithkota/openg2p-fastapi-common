@@ -64,18 +64,18 @@ class AuthController(BaseController):
         - If online is true, the server will try to userinfo from original Authorization Server.
           Else it will return the information present in ID Token and Access token.
         """
-        provider = await self.get_login_provider_db_by_iss(auth.iss)
-        if provider.type == LoginProviderTypes.oauth2_auth_code:
-            if online:
-                return BasicProfile.model_validate(
-                    await self.get_oauth_validation_data(
-                        auth, iss=auth.iss, provider=provider, combine=True
+        if online:
+            provider = await self.get_login_provider_db_by_iss(auth.iss)
+            if provider:
+                if provider.type == LoginProviderTypes.oauth2_auth_code:
+                    return BasicProfile.model_validate(
+                        await self.get_oauth_validation_data(
+                            auth, iss=auth.iss, provider=provider, combine=True
+                        )
                     )
-                )
-            else:
-                return BasicProfile.model_validate(auth.model_dump())
-        else:
-            raise NotImplementedError()
+                else:
+                    raise NotImplementedError()
+        return BasicProfile.model_validate(auth.model_dump())
 
     async def logout(self, response: Response):
         """
@@ -163,16 +163,7 @@ class AuthController(BaseController):
         access_token = auth.credentials if isinstance(auth, AuthCredentials) else auth
         if not iss:
             iss = (
-                jwt.decode(
-                    access_token,
-                    None,
-                    options={
-                        "verify_signature": False,
-                        "verify_aud": False,
-                        "verify_iss": False,
-                        "verify_sub": False,
-                    },
-                )["iss"]
+                jwt.get_unverified_claims(access_token)["iss"]
                 if isinstance(auth, str)
                 else auth.iss
             )
@@ -191,20 +182,9 @@ class AuthController(BaseController):
             if response.headers["content-type"].startswith("application/json"):
                 res = response.json()
             elif response.headers["content-type"].startswith("application/jwt"):
-                res = jwt.decode(
-                    response.content,
-                    # jwks_cache.get().get(auth.iss),
-                    # TODO: Skipping this jwt validation. Some errors.
-                    None,
-                    options={
-                        "verify_signature": False,
-                        "verify_aud": False,
-                        "verify_nbf": False,
-                        "verify_iss": False,
-                        "verify_sub": False,
-                        "verify_jti": False,
-                    },
-                )
+                # jwks_cache.get().get(auth.iss),
+                # TODO: Skipping this jwt validation. Some errors.
+                res = jwt.get_unverified_claims(response.content)
             if combine:
                 return JwtBearerAuth.combine_tokens(access_token, id_token, res)
             else:
