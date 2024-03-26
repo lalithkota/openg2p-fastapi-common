@@ -118,20 +118,7 @@ class OAuthController(BaseController):
             id_token: str = res["id_token"]
 
             config_dict = _config.model_dump()
-            access_token_payload = jwt.decode(
-                access_token,
-                None,
-                options={
-                    "verify_signature": False,
-                    "verify_aud": False,
-                    "verify_iat": False,
-                    "verify_exp": False,
-                    "verify_nbf": False,
-                    "verify_iss": False,
-                    "verify_sub": False,
-                    "verify_jti": False,
-                },
-            )
+            access_token_payload = jwt.get_unverified_claims(access_token)
             response = RedirectResponse(state.get("r", "/"))
             response.set_cookie(
                 "X-Access-Token",
