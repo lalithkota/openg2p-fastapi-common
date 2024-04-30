@@ -29,8 +29,3 @@ jobs:
       with:
         packages-dir: openg2p-fastapi-auth/dist
         password: ${{ secrets.PYPI_API_TOKEN }}
-    - name: Publish common-g2pconnect-id-mapper
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        packages-dir: openg2p-common-g2pconnect-id-mapper/dist
-        password: ${{ secrets.PYPI_API_TOKEN }}

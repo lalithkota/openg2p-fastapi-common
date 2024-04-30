@@ -1,6 +1,6 @@
 # Do NOT update manually; changes here will be overwritten by Copier
-_commit: c14ee3b
-_src_path: ../openg2p-fastapi-template
+_commit: b004f05
+_src_path: https://github.com/openg2p/openg2p-fastapi-template
 github_ci_docker_build: false
 github_ci_openapi_publish: false
 github_ci_precommit: true
