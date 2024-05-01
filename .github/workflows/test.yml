@@ -37,11 +37,16 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.py }}
-      - name: Install tox
-        run: python -m pip install tox-gh>=1.2
-      - name: Setup test suite
-        run: tox -vv --notest
+      - name: Install test requirements
+        run: |
+          python -m pip install -r test-requirements.txt
+          python -m pip install -e ./openg2p-fastapi-common
+          python -m pip install -e ./openg2p-fastapi-auth
       - name: Run test suite
-        run: tox --skip-pkg-install
+        run: |
+          pytest --cov-branch --cov-report=term-missing --cov=openg2p_fastapi_common --cov=tests openg2p-fastapi-common
+          pytest --cov-branch --cov-report=term-missing --cov=openg2p_fastapi_auth --cov=tests openg2p-fastapi-auth --cov-append
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
