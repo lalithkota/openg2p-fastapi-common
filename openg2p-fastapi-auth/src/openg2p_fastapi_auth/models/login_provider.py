@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from pydantic import BaseModel
 
@@ -9,7 +9,7 @@ class LoginProviderResponse(BaseModel):
     id: int
     name: str
     type: LoginProviderTypes
-    displayName: str
+    displayName: Union[str, dict]
     displayIconUrl: str
 
 
