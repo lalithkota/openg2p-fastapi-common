@@ -1,4 +1,6 @@
 """Module initializing configs"""
+import os
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 
@@ -8,6 +10,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from . import __version__
 from .context import config_registry
 
+class WorkerType(Enum):
+    local = "local"
+    uvicorn = "uvicorn"
+    gunicorn = "gunicorn"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -16,6 +23,13 @@ class Settings(BaseSettings):
 
     host: str = "0.0.0.0"
     port: int = 8000
+
+    no_of_workers: int = 1
+    worker_id: int = -1
+    worker_pid: int = -1
+    worker_type: WorkerType = WorkerType.local
+    docker_pod_id: str = ""
+    docker_pod_name: str = ""
 
     logging_default_logger_name: str = "app"
     logging_level: str = "INFO"
@@ -68,6 +82,12 @@ class Settings(BaseSettings):
 
         return self
 
+    @model_validator(mode="after")
+    def validate_worker_ids_and_pod_ids(self) -> "Settings":
+        self.set_current_worker_id()
+        self.set_current_docker_pod_id()
+        return self
+
     @classmethod
     def get_config(cls, strict=True):
         result = None
@@ -84,3 +104,17 @@ class Settings(BaseSettings):
             result = cls()
             config_registry.get().append(result)
         return result
+
+    def set_current_worker_id(self):
+        if self.worker_type==WorkerType.local:
+            return
+        try:
+            self.worker_pid = os.getpid()
+            import subprocess
+            pid_arr = sorted([int(a) for a in str(subprocess.check_output(['pgrep', '-f', self.worker_type.value]), 'UTF-8').split('\n') if a])
+            self.worker_id = pid_arr.index(self.worker_pid) - 1
+        except:
+            pass
+
+    def set_current_docker_pod_id(self):
+        self.docker_pod_id = str(self.docker_pod_name.split('-')[-1])
