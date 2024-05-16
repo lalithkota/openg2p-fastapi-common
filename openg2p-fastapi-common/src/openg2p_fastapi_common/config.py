@@ -10,6 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from . import __version__
 from .context import config_registry
 
+
 class WorkerType(Enum):
     local = "local"
     uvicorn = "uvicorn"
@@ -106,15 +107,27 @@ class Settings(BaseSettings):
         return result
 
     def set_current_worker_id(self):
-        if self.worker_type==WorkerType.local:
+        if self.worker_type == WorkerType.local:
             return
         try:
             self.worker_pid = os.getpid()
             import subprocess
-            pid_arr = sorted([int(a) for a in str(subprocess.check_output(['pgrep', '-f', self.worker_type.value]), 'UTF-8').split('\n') if a])
+
+            pid_arr = sorted(
+                [
+                    int(a)
+                    for a in str(
+                        subprocess.check_output(
+                            ["pgrep", "-f", self.worker_type.value]
+                        ),
+                        "UTF-8",
+                    ).split("\n")
+                    if a
+                ]
+            )
             self.worker_id = pid_arr.index(self.worker_pid) - 1
-        except:
+        except Exception:
             pass
 
     def set_current_docker_pod_id(self):
-        self.docker_pod_id = str(self.docker_pod_name.split('-')[-1])
+        self.docker_pod_id = str(self.docker_pod_name.split("-")[-1])

@@ -69,7 +69,11 @@ class Initializer(BaseComponent):
         )
         json_logging.init_request_instrument(app)
         app_registry.set(app)
-        _logger.info("Worker ID - %s. Docker Pod ID - %s", _config.worker_id, _config.docker_pod_id)
+        _logger.info(
+            "Worker ID - %s. Docker Pod ID - %s",
+            _config.worker_id,
+            _config.docker_pod_id,
+        )
         return app
 
     def return_app(self):
@@ -98,10 +102,18 @@ class Initializer(BaseComponent):
         app = self.return_app()
         if _config.worker_type == WorkerType.gunicorn:
             import subprocess
-            subprocess.run(f'gunicorn "main:app" --workers {_config.no_of_workers} --worker-class uvicorn.workers.UvicornWorker --bind {_config.host}:{_config.port}', shell=True)
+
+            subprocess.run(
+                f'gunicorn "main:app" --workers {_config.no_of_workers} --worker-class uvicorn.workers.UvicornWorker --bind {_config.host}:{_config.port}',
+                shell=True,
+            )
         if _config.worker_type == WorkerType.uvicorn:
             import subprocess
-            subprocess.run(f'uvicorn "main:app" --workers {_config.no_of_workers} --host {_config.host} --port {_config.port}', shell=True)
+
+            subprocess.run(
+                f'uvicorn "main:app" --workers {_config.no_of_workers} --host {_config.host} --port {_config.port}',
+                shell=True,
+            )
         if _config.worker_type == WorkerType.local:
             uvicorn.run(
                 app,
