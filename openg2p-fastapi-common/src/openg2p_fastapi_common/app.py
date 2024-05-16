@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from .component import BaseComponent
-from .config import Settings
+from .config import Settings, WorkerType
 from .context import app_registry, component_registry, dbengine
 from .exception import BaseExceptionHandler
 
@@ -69,7 +69,15 @@ class Initializer(BaseComponent):
         )
         json_logging.init_request_instrument(app)
         app_registry.set(app)
+        _logger.info(
+            "Worker ID - %s. Docker Pod ID - %s",
+            _config.worker_id,
+            _config.docker_pod_id,
+        )
         return app
+
+    def return_app(self):
+        return app_registry.get()
 
     def main(self):
         parser = argparse.ArgumentParser(description="FastApi Common Server")
@@ -91,20 +99,37 @@ class Initializer(BaseComponent):
         args.func(args)
 
     def run_server(self, args):
-        app = app_registry.get()
-        uvicorn.run(
-            app,
-            host=_config.host,
-            port=_config.port,
-            access_log=False,
-        )
+        app = self.return_app()
+        if _config.worker_type == WorkerType.gunicorn:
+            import subprocess
+
+            subprocess.run(
+                f'gunicorn "main:app" --workers {_config.no_of_workers} --worker-class uvicorn.workers.UvicornWorker --bind {_config.host}:{_config.port}',
+                shell=True,
+            )
+        if _config.worker_type == WorkerType.uvicorn:
+            import subprocess
+
+            subprocess.run(
+                f'uvicorn "main:app" --workers {_config.no_of_workers} --host {_config.host} --port {_config.port}',
+                shell=True,
+            )
+        if _config.worker_type == WorkerType.local:
+            uvicorn.run(
+                app,
+                host=_config.host,
+                port=_config.port,
+                access_log=False,
+                # The following is not possible
+                # workers=_config.no_of_workers
+            )
 
     def migrate_database(self, args):
         # Implement the logic for the 'migrate' subcommand here
         _logger.info("Starting DB migrations.")
 
     def get_openapi(self, args):
-        app = app_registry.get()
+        app = self.return_app()
         with open(args.filepath, "wb+") as f:
             f.write(orjson.dumps(app.openapi(), option=orjson.OPT_INDENT_2))
             f.write(b"\n")
