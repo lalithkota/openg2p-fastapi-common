@@ -5,7 +5,7 @@ from typing import Annotated, List, Union
 
 import httpx
 import orjson
-from fastapi import Depends, Response
+from fastapi import Depends, HTTPException, Response, status
 from fastapi.responses import RedirectResponse
 from jose import jwt
 from openg2p_fastapi_common.controller import BaseController
@@ -112,9 +112,20 @@ class AuthController(BaseController):
         login_provider = None
         try:
             login_provider = await self.get_login_provider_db_by_id(id)
-        except Exception:
+        except Exception as e:
             _logger.exception("Login Provider fetching: Invalid Id")
-            return None
+            # Instead of returning None, re-raise the exception to be handled by FastAPI
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Login Provider ID Not Found",
+            ) from e
+
+        if not login_provider:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Login Provider ID Not Found",
+            )
+
         if login_provider.type == LoginProviderTypes.oauth2_auth_code:
             auth_parameters = OauthProviderParameters.model_validate(
                 login_provider.authorization_parameters
