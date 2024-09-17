@@ -122,7 +122,9 @@ class OAuthController(BaseController):
             if config_dict.get("auth_cookie_set_expires", False):
                 expires_in = res.get("expires_in", None)
                 if expires_in:
-                    expires_in = datetime.now(tz=timezone.utc) + timedelta(seconds=expires_in)
+                    expires_in = datetime.now(tz=timezone.utc) + timedelta(
+                        seconds=expires_in
+                    )
 
             response = RedirectResponse(state.get("r", "/"))
             response.set_cookie(

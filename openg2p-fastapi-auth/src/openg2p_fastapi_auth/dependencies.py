@@ -168,7 +168,11 @@ class JwtBearerAuth(HTTPBearer):
         for token in tokens:
             if token:
                 try:
-                    res.append(jwt.get_unverified_claims(token) if isinstance(token, str) else token)
+                    res.append(
+                        jwt.get_unverified_claims(token)
+                        if isinstance(token, str)
+                        else token
+                    )
                 except Exception:
                     # This means one of the token being combined is not JWT or dict.
                     # Ignore such tokens

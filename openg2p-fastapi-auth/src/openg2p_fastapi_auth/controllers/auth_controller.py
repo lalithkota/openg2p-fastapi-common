@@ -144,10 +144,12 @@ class AuthController(BaseController):
                 ).decode(),
             }
             if auth_parameters.enable_pkce:
-                authorize_query_params.update({
-                    "code_challenge": auth_parameters.code_challenge,
-                    "code_challenge_method": auth_parameters.code_challenge_method,
-                })
+                authorize_query_params.update(
+                    {
+                        "code_challenge": auth_parameters.code_challenge,
+                        "code_challenge_method": auth_parameters.code_challenge_method,
+                    }
+                )
 
             authorize_query_params.update(auth_parameters.extra_authorize_parameters)
             return RedirectResponse(
