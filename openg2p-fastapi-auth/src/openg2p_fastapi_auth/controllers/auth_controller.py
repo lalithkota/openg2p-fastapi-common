@@ -136,9 +136,6 @@ class AuthController(BaseController):
                 "redirect_uri": auth_parameters.redirect_uri,
                 "scope": auth_parameters.scope,
                 "nonce": secrets.token_urlsafe(),
-                "code_verifier": auth_parameters.code_verifier,
-                "code_challenge": auth_parameters.code_challenge,
-                "code_challenge_method": auth_parameters.code_challenge_method,
                 "state": orjson.dumps(
                     {
                         "p": login_provider.id,
@@ -146,6 +143,13 @@ class AuthController(BaseController):
                     }
                 ).decode(),
             }
+            if auth_parameters.enable_pkce:
+                authorize_query_params.update(
+                    {
+                        "code_challenge": auth_parameters.code_challenge,
+                        "code_challenge_method": auth_parameters.code_challenge_method,
+                    }
+                )
 
             authorize_query_params.update(auth_parameters.extra_authorize_parameters)
             return RedirectResponse(
@@ -172,13 +176,13 @@ class AuthController(BaseController):
         combine=True,
     ) -> dict:
         access_token = auth.credentials if isinstance(auth, AuthCredentials) else auth
-        if not iss:
-            iss = (
-                jwt.get_unverified_claims(access_token)["iss"]
-                if isinstance(auth, str)
-                else auth.iss
-            )
         if not provider:
+            if not iss:
+                iss = (
+                    jwt.get_unverified_claims(access_token)["iss"]
+                    if isinstance(auth, str)
+                    else auth.iss
+                )
             provider = await self.get_login_provider_db_by_iss(iss)
         # TODO: Check if provider is None
         auth_params = OauthProviderParameters.model_validate(
