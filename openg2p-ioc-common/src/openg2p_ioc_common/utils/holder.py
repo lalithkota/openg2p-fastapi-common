@@ -1,6 +1,12 @@
+import sys
 from typing import Generic, TypeVar
 
-_T = TypeVar("T")
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
+_T = TypeVar("_T")
 
 
 class Holder(Generic[_T]):
@@ -30,7 +36,7 @@ class Holder(Generic[_T]):
             return default
         return self.value
 
-    def set(self, value: _T) -> "Holder":
+    def set(self, value: _T) -> Self:
         self.value = value
         return self
 

@@ -1,54 +1,31 @@
 """Module containing initialization instructions and FastAPI app"""
 
-import argparse
 import logging
-import sys
 from contextlib import asynccontextmanager
 
 import json_logging
 import orjson
 import uvicorn
 from fastapi import FastAPI
-from sqlalchemy.ext.asyncio import create_async_engine
 
-from .component import BaseComponent
+from openg2p_ioc_common.app import Initializer as BaseInitializer
+from openg2p_ioc_common.service import BaseAsyncService
+from openg2p_ioc_common.context import component_registry
+
 from .config import Settings, WorkerType
-from .context import app_registry, component_registry, dbengine
+from .context import app_registry
 from .exception import BaseExceptionHandler
 
 _config = Settings.get_config(strict=False)
 _logger = logging.getLogger(_config.logging_default_logger_name)
 
 
-class Initializer(BaseComponent):
-    def __init__(self, name="", **kwargs):
-        super().__init__(name=name, **kwargs)
-        self.initialize()
-
-    def initialize(self):
-        """
-        Initializes all components
-        """
-        self.init_logger()
-        self.init_app()
-        self.init_db()
-
-        BaseExceptionHandler()
-
+class Initializer(BaseInitializer):
     def init_logger(self):
+        logger = super().init_logger()
         json_logging.init_fastapi(enable_json=True)
         json_logging.JSON_SERIALIZER = lambda log: orjson.dumps(log).decode("utf-8")
-        _logger.setLevel(getattr(logging, _config.logging_level))
-        _logger.addHandler(logging.StreamHandler(sys.stdout))
-        if _config.logging_file_name:
-            file_handler = logging.FileHandler(_config.logging_file_name)
-            _logger.addHandler(file_handler)
-        return _logger
-
-    def init_db(self):
-        if _config.db_datasource:
-            db_engine = create_async_engine(_config.db_datasource, echo=_config.db_logging)
-            dbengine.set(db_engine)
+        return logger
 
     def init_app(self):
         app = FastAPI(
@@ -68,28 +45,28 @@ class Initializer(BaseComponent):
         )
         json_logging.init_request_instrument(app)
         app_registry.set(app)
+        self.create_exception_handler()
         _logger.info(
             "Worker ID - %s. Docker Pod ID - %s",
             _config.worker_id,
             _config.docker_pod_id,
         )
         return app
+    
+    def create_exception_handler(self):
+        return BaseExceptionHandler(app=app_registry.get())
 
     def return_app(self):
         return app_registry.get()
 
-    def main(self):
-        parser = argparse.ArgumentParser(description="FastApi Common Server")
-        subparsers = parser.add_subparsers(help="List Commands.", required=True)
-        run_subparser = subparsers.add_parser("run", help="Run API Server.")
+    def main_create_parser(self):
+        parser, sp = super().main_create_parser()
+        run_subparser = sp.add_parser("run", help="Run API Server.")
         run_subparser.set_defaults(func=self.run_server)
-        migrate_subparser = subparsers.add_parser("migrate", help="Create/Migrate Database Tables.")
-        migrate_subparser.set_defaults(func=self.migrate_database)
-        openapi_subparser = subparsers.add_parser("getOpenAPI", help="Get OpenAPI Json of the Server.")
+        openapi_subparser = sp.add_parser("getOpenAPI", help="Get OpenAPI Json of the Server.")
         openapi_subparser.add_argument("filepath", help="Path of the Output OpenAPI Json File.")
         openapi_subparser.set_defaults(func=self.get_openapi)
-        args = parser.parse_args()
-        args.func(args)
+        return parser, sp
 
     def run_server(self, args):
         app = self.return_app()
@@ -117,10 +94,6 @@ class Initializer(BaseComponent):
                 # workers=_config.no_of_workers
             )
 
-    def migrate_database(self, args):
-        # Implement the logic for the 'migrate' subcommand here
-        _logger.info("Starting DB migrations.")
-
     def get_openapi(self, args):
         app = self.return_app()
         with open(args.filepath, "wb+") as f:
@@ -133,17 +106,24 @@ class Initializer(BaseComponent):
 
     async def fastapi_app_shutdown(self, app: FastAPI):
         # Overload this method to execute something on shutdown
-        if dbengine.get():
-            await dbengine.get().dispose()
-            dbengine.set(None)
+        try:
+            from openg2p_db_common.context import dbengine
+
+            if dbengine.get():
+                await dbengine.get().dispose()
+                dbengine.set(None)
+        except ImportError:
+            pass
 
     @asynccontextmanager
     async def fastapi_app_lifespan(self, app: FastAPI):
         cr = component_registry.get() or []
-        for initializer in cr:
-            if isinstance(initializer, Initializer):
-                await initializer.fastapi_app_startup(app)
+        for component in cr:
+            if isinstance(component, Initializer):
+                await component.fastapi_app_startup(app)
         yield
-        for initializer in cr:
-            if isinstance(initializer, Initializer):
-                await initializer.fastapi_app_shutdown(app)
+        for component in cr:
+            if isinstance(component, Initializer):
+                await component.fastapi_app_shutdown(app)
+            elif isinstance(component, BaseAsyncService):
+                await component.aclose()

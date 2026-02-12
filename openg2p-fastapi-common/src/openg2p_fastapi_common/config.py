@@ -1,20 +1,14 @@
 """Module initializing configs"""
 
 import os
-import sys
 from enum import Enum
-from pathlib import Path
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 from pydantic import model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import SettingsConfigDict
+
+from openg2p_ioc_common.config import Settings as BaseSettings
 
 from . import __version__
-from .context import config_registry
 
 
 class WorkerType(Enum):
@@ -38,10 +32,6 @@ class Settings(BaseSettings):
     docker_pod_id: str = ""
     docker_pod_name: str = ""
 
-    logging_default_logger_name: str = "app"
-    logging_level: str = "INFO"
-    logging_file_name: Path | None = None
-
     openapi_title: str = "Common"
     openapi_description: str = """
     This is common library for FastAPI service. Override Settings properties to change this.
@@ -58,76 +48,11 @@ class Settings(BaseSettings):
     openapi_root_path: str = ""
     openapi_common_api_prefix: str = ""
 
-    # If empty will be constructed like this
-    # f"{db_driver}://{db_username}:{db_password}@{db_hostname}:{db_port}/{db_dbname}"
-    db_datasource: str = ""
-    db_driver: str = "postgresql+asyncpg"
-    db_username: str = ""
-    db_password: str = ""
-    db_hostname: str = "localhost"
-    db_port: int = 5432
-    db_dbname: str = ""
-    db_logging: bool = False
-
-    error_response_debug: bool = False
-
-    keymanager_api_base_url: str = ""
-    keymanager_api_timeout: int = 10
-    keymanager_api_domain: str = "AUTH"
-    keymanager_ssl_verify: bool = False
-    keymanager_auth_enabled: bool = True
-    keymanager_auth_url: str = ""
-    keymanager_auth_client_id: str = "openg2p"
-    keymanager_auth_client_secret: str = ""
-    keymanager_sign_app_id: str = "OPENG2P"
-    keymanager_sign_ref_id: str = ""
-
     @model_validator(mode="after")
-    def validate_db_datasource(self) -> Self:
-        if self.db_datasource:
-            return self
-        datasource = ""
-        if self.db_driver:
-            datasource += f"{self.db_driver}://"
-        if self.db_username:
-            datasource += f"{self.db_username}:{self.db_password}@"
-        if self.db_hostname:
-            datasource += self.db_hostname
-        if self.db_port:
-            datasource += f":{self.db_port}"
-        if self.db_dbname:
-            datasource += f"/{self.db_dbname}"
-
-        self.db_datasource = datasource
-
-        return self
-
-    @model_validator(mode="after")
-    def validate_worker_ids_and_pod_ids(self) -> Self:
+    def validate_worker_ids_and_pod_ids(self):
         self.set_current_worker_id()
         self.set_current_docker_pod_id()
         return self
-
-    @classmethod
-    def get_config(cls, strict=True) -> Self:
-        result = None
-        cr = config_registry.get()
-        if not cr:
-            cr = []
-            config_registry.set(cr)
-        for config in cr:
-            if strict:
-                if cls is type(config):
-                    result = config
-                    break
-            else:
-                if isinstance(config, cls):
-                    result = config
-                    break
-        if not result:
-            result = cls()
-            cr.append(result)
-        return result
 
     def set_current_worker_id(self):
         if self.worker_type == WorkerType.local:

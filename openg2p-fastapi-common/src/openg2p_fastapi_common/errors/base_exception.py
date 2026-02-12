@@ -1,7 +1,9 @@
 from fastapi import HTTPException
 
+from openg2p_ioc_common.base_exception import BaseAppException as BE
 
-class BaseAppException(HTTPException):
+
+class BaseAppException(HTTPException, BE):
     def __init__(self, code, message, http_status_code=500, headers=None, **kwargs):
         # TODO: Handle Multiple Exceptions
         super().__init__(status_code=http_status_code, detail=message, headers=headers, **kwargs)

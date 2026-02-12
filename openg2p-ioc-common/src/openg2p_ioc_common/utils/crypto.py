@@ -6,13 +6,13 @@ import httpx
 import orjson
 
 from ..config import Settings
-from ..service import BaseService
+from ..service import BaseAsyncService
 
 _config = Settings.get_config(strict=False)
 _logger = logging.getLogger(_config.logging_default_logger_name)
 
 
-class CryptoHelper(BaseService):
+class CryptoHelper(BaseAsyncService):
     async def aclose(self):
         """Closes Crypto Helper"""
 

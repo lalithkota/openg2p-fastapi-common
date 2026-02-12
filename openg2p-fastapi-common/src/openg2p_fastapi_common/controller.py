@@ -4,7 +4,8 @@ from fastapi.datastructures import Default
 from fastapi.responses import ORJSONResponse
 from fastapi.routing import APIRouter
 
-from .component import BaseComponent
+from openg2p_ioc_common.component import BaseComponent
+
 from .config import Settings
 from .context import app_registry
 from .errors import ErrorListResponse

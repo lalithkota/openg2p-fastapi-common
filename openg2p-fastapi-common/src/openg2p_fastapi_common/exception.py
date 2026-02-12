@@ -1,10 +1,12 @@
 import logging
 
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import ORJSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from .component import BaseComponent
+from openg2p_ioc_common.component import BaseComponent
+
 from .config import Settings
 from .context import app_registry
 from .errors import BaseAppException, ErrorListResponse, ErrorResponse
@@ -22,10 +24,11 @@ _logger = logging.getLogger(_config.logging_default_logger_name)
 
 
 class BaseExceptionHandler(BaseComponent):
-    def __init__(self, name="", **kwargs):
+    def __init__(self, app: FastAPI | None=None, name="", **kwargs):
         super().__init__(name=name)
 
-        app = app_registry.get()
+        if not app:
+            app = app_registry.get()
         app.add_exception_handler(StarletteHTTPException, self.http_exception_handler)
         app.add_exception_handler(BaseAppException, self.base_exception_handler)
         app.add_exception_handler(RequestValidationError, self.request_validation_exception_handler)
